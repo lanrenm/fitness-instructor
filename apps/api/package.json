@@ -1,0 +1,10 @@
+{
+  "name": "api",
+  "version": "0.0.1",
+  "description": "NestJS Backend API",
+  "scripts": {
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:prod": "node dist/main"
+  }
+}
