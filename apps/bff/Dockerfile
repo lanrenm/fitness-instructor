@@ -1,9 +1,13 @@
-FROM node:24.14.0-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm config set proxy http://host.docker.internal:7897 && \
+    npm config set https-proxy http://host.docker.internal:7897
+
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --omit=dev --ignore-scripts
 
 COPY . .
 

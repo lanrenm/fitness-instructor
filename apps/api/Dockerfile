@@ -1,16 +1,16 @@
-FROM node:24.14.0-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
-# 安装依赖（利用 Docker 缓存）
-COPY package*.json ./
-RUN npm ci --only=production
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm config set proxy http://host.docker.internal:7897 && \
+    npm config set https-proxy http://host.docker.internal:7897
 
-# 复制源码（开发模式下会被 volume 覆盖）
+COPY package*.json ./
+RUN npm install --omit=dev --ignore-scripts
+
 COPY . .
 
-# 暴露端口
 EXPOSE 3001
 
-# 启动命令（默认 dev 模式）
 CMD ["npm", "run", "start:dev"]

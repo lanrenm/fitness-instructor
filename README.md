@@ -23,15 +23,25 @@ fitness-instructor/
 │   └── postgres/
 ├── packages/         # 共享代码（可选）
 ├── .docker/          # 🔥 Docker 配置集中管理
-│   ├── docker-compose.yml
-│   ├── .env.example
-│   └── Makefile
+│   ├── docker-compose.yml  # 服务编排
+│   ├── Makefile            # 便利脚本
+│   ├── BUILD.md            # 📖 Docker 搭建详细文档
+│   ├── .env.example       # 环境变量模板
+│   └── .env               # 实际环境变量（不提交 git）
 └── README.md
 ```
 
 ## 快速开始
 
-### 1. 初始化环境变量
+### 1. 安装 Docker 环境
+
+参考 [.docker/BUILD.md](./.docker/BUILD.md) 完成以下步骤：
+
+1. 安装 OrbStack 或 Docker Desktop
+2. 配置网络代理
+3. 验证 Docker 可用
+
+### 2. 初始化环境变量
 
 ```bash
 cd .docker
@@ -39,60 +49,29 @@ cp .env.example .env
 # 编辑 .env，修改密码等配置
 ```
 
-### 2. 启动所有服务
+### 3. 构建镜像
 
 ```bash
 cd .docker
-docker compose up -d
-
-# 或者使用 Makefile
-make up
+make build
 ```
 
-### 3. 查看服务状态
+> ⚠️ 前提：本机需要开启代理（如 Clash Verge），端口 `7897`。
+
+### 4. 启动服务
 
 ```bash
-docker compose ps
+# 拉取 PostgreSQL 镜像（可能需要多试几次）
+docker pull postgres:16-alpine
 
-# 或
+# 启动所有服务
+make up
+
+# 查看状态
 make ps
 ```
 
-### 4. 查看日志
-
-```bash
-# 所有服务
-make logs
-
-# 指定服务
-make logs-api
-make logs-bff
-make logs-web
-```
-
-### 5. 停止服务
-
-```bash
-make down
-
-# 清除数据（慎用！）
-make down-v
-```
-
-## Makefile 常用命令
-
-```bash
-make help          # 查看所有可用命令
-make up            # 启动
-make down          # 停止
-make restart       # 重启
-make logs          # 查看日志
-make shell-api     # 进入 API 容器
-make db-migrate    # 运行数据库迁移
-make clean         # 清理
-```
-
-## 服务地址
+### 5. 访问服务
 
 | 服务 | 地址 |
 |------|------|
@@ -101,6 +80,56 @@ make clean         # 清理
 | API 后端 | http://localhost:3001 |
 | PostgreSQL | localhost:5432 |
 
+## Makefile 常用命令
+
+```bash
+make help          # 查看所有可用命令
+```
+
+### 启动/停止
+
+```bash
+make up              # 启动所有服务
+make down           # 停止所有服务
+make restart        # 重启
+```
+
+### 构建
+
+```bash
+make build          # 构建所有镜像（API / BFF / Web）
+make build-api      # 只构建 API
+make build-bff      # 只构建 BFF
+make build-web      # 只构建 Web
+make rebuild        # 重新构建并启动
+```
+
+### 日志
+
+```bash
+make logs           # 查看所有日志
+make logs-api      # 只看 API 日志
+make logs-bff      # 只看 BFF 日志
+make logs-web      # 只看 Web 日志
+```
+
+### 进入容器
+
+```bash
+make shell-api      # 进入 API 容器
+make shell-bff      # 进入 BFF 容器
+make shell-web      # 进入 Web 容器
+make shell-postgres # 进入 PostgreSQL
+```
+
+### 数据库
+
+```bash
+make db-migrate     # 运行数据库迁移
+make db-generate    # 生成 Prisma Client
+make db-reset       # 重置数据库
+```
+
 ## 开发说明
 
 ### 初始化各服务项目
@@ -108,36 +137,39 @@ make clean         # 清理
 ```bash
 # NestJS API
 cd apps/api
-npx @nestjs/cli new . --skip-git --package-manager npm
+npx @nestjs/cli new . --skip-git --package-manager npm --skip-install
+cd ../..
 
 # NextJS BFF
 cd apps/bff
-npx create-next-app@latest . --typescript --eslint --no-tailwind --src-dir --app --no-import-alias
+npx create-next-app@latest . --typescript --eslint --no-tailwind --src-dir --app --no-import-alias --skip-install
+cd ../..
 
 # React Web
 cd apps/web
 npm create vite@latest . -- --template react-ts
+cd ../..
 ```
 
-### 初始化数据库（以 Prisma 为例）
+### 安装依赖
+
+```bash
+cd apps/api && npm install && cd ../..
+cd apps/bff && npm install && cd ../..
+cd apps/web && npm install && cd ../..
+```
+
+### 配置数据库
 
 ```bash
 cd apps/api
 npm install prisma @prisma/client
 npx prisma init
-
 # 编辑 .env 中的 DATABASE_URL
 # 然后运行迁移
 cd ../..
 make db-migrate
 ```
-
-### 添加新的微服务
-
-1. 在 `apps/` 下创建新服务目录
-2. 添加 `Dockerfile`
-3. 在 `.docker/docker-compose.yml` 中添加服务配置
-4. 在 `.docker/Makefile` 中添加便捷命令
 
 ## 环境变量说明
 
@@ -151,3 +183,15 @@ make db-migrate
 | `WEB_PORT` | React Dev Server 端口 | `5173` |
 | `JWT_SECRET` | JWT 签名密钥 | - |
 | `VITE_API_BASE_URL` | 前端访问 BFF 的地址 | `http://localhost:3000` |
+
+## 添加新的微服务
+
+1. 在 `apps/` 下创建新服务目录
+2. 添加 `Dockerfile`（参考 [.docker/BUILD.md](./.docker/BUILD.md)）
+3. 在 `.docker/docker-compose.yml` 中添加服务配置
+4. 在 `.docker/Makefile` 中添加便捷命令
+5. 执行 `make build` 重新构建镜像
+
+## 文档
+
+- [Docker 搭建详细文档](./.docker/BUILD.md) — 从零搭建 Docker 的完整指南，包含代理配置、常见问题排查等
