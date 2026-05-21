@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// 用户表
+model User {
+  id          String    @id @default(cuid()) // 唯一标识符，使用 cuid 自动生成
+  email       String    @unique // 用户邮箱，用于登录和找回密码
+  phonenumber String    @unique // 用户手机号，用于登录和接收通知
+  password    String // 用户密码（已加密存储）
+  name        String? // 用户昵称或真实姓名
+  createdAt   DateTime  @default(now()) // 账户创建时间
+  updatedAt   DateTime  @updatedAt // 账户信息最后更新时间
+  workouts    Workout[] // 关联关系：当前用户创建的所有训练计划
+}
+
+// 动作表
+model Excercises {
+  id                String              @id @default(cuid()) // 唯一标识符，使用 cuid 自动生成
+  name              String // 动作名称，如"俯卧撑"、"深蹲"等
+  description       String? // 动作的详细描述，说明动作要点和注意事项
+  category          Int                 @default(1) // 动作所属类别：1=基础、2=力量、3=有氧、4=柔韧、5=平衡、6=爆发力
+  difficulty        Int                 @default(1) // 难度等级：1=初学者、2=中级、3=高级、4=专业级
+  targetMuscles     String[] // 目标肌群列表，如["胸肌", "三头肌"]，支持多肌群训练（兼容性保留）
+  equipment         String[] // 完成动作所需的器械设备，如["哑铃", "杠铃"]，空数组表示无需器械
+  duration          Int? // 建议完成时间（秒），主要用于计时类动作
+  reps              Int? // 推荐训练次数，默认每组次数
+  sets              Int? // 推荐训练组数
+  imageUrl          String? // 动作示范图片的 URL 地址
+  videoUrl          String? // 动作演示视频的 URL 地址
+  notes             String? // 动作的注意事项或教练备注
+  isActive          Boolean             @default(true) // 是否启用该动作，禁用后可保留历史记录但不显示在列表中
+  createdAt         DateTime            @default(now()) // 记录创建时间
+  updatedAt         DateTime            @updatedAt // 记录最后更新时间
+  workoutExcercises WorkoutExcercises[] // 关联关系：当前动作关联到的所有训练计划
+  excerciseMuscles  ExcerciseMuscle[] // 关联关系：动作涉及的肌群及其权重信息
+}
+
+// 肌群表
+model MuscleGroup {
+  id               String            @id @default(cuid()) // 唯一标识符，使用 cuid 自动生成
+  name             String // 肌群名称，如"胸肌"、"三角肌"、"肱二头肌"等
+  description      String? // 肌群的详细描述或说明
+  parentId         String? // 父级肌群ID，用于建立层级关系（如三角肌的父级为肩部肌群）
+  isActive         Boolean           @default(true) // 是否启用该肌群，禁用后可保留历史记录但不显示在列表中
+  createdAt        DateTime          @default(now()) // 记录创建时间
+  updatedAt        DateTime          @updatedAt // 记录最后更新时间
+  parent           MuscleGroup?      @relation("MuscleGroupHierarchy", fields: [parentId], references: [id]) // 关联关系：父级肌群（自关联）
+  children         MuscleGroup[]     @relation("MuscleGroupHierarchy") // 关联关系：子级肌群（自关联）
+  excerciseMuscles ExcerciseMuscle[] // 关联关系：该肌群涉及的所有动作及其权重信息
+}
+
+// 动作肌群关联表（多对多关系的中间表，包含权重信息）
+model ExcerciseMuscle {
+  id            String      @id @default(cuid()) // 唯一标识符，使用 cuid 自动生成
+  excerciseId   String // 关联的动作ID
+  muscleGroupId String // 关联的肌群ID
+  weight        Int // 发力权重（0-100），表示该肌群在此动作中的发力占比，数值越大发力越多
+  isPrimary     Boolean     @default(false) // 是否为主动肌（主要发力肌群），true表示该肌群是动作的主要发力点
+  createdAt     DateTime    @default(now()) // 记录创建时间
+  excercise     Excercises  @relation(fields: [excerciseId], references: [id], onDelete: Cascade) // 关联关系：关联的动作，删除动作时级联删除关联记录
+  muscleGroup   MuscleGroup @relation(fields: [muscleGroupId], references: [id], onDelete: Cascade) // 关联关系：关联的肌群，删除肌群时级联删除关联记录
+
+  @@unique([excerciseId, muscleGroupId]) // 确保同一动作中每个肌群只出现一次
+}
+
+// 训练计划表
+model Workout {
+  id                String              @id @default(cuid()) // 唯一标识符，使用 cuid 自动生成
+  name              String // 训练计划名称，如"周一胸肌训练"、"减脂计划"等
+  description       String? // 训练计划的详细描述或说明
+  userId            String? // 训练计划所属用户的 ID，为空表示公共训练计划
+  isPublic          Boolean             @default(false) // 是否为公共训练计划，公共计划可供所有用户查看使用
+  createdAt         DateTime            @default(now()) // 记录创建时间
+  updatedAt         DateTime            @updatedAt // 记录最后更新时间
+  user              User?               @relation(fields: [userId], references: [id]) // 关联关系：训练计划所属的用户
+  workoutExcercises WorkoutExcercises[] // 关联关系：训练计划包含的所有动作
+}
+
+// 训练计划动作关联表（多对多关系的中间表）
+model WorkoutExcercises {
+  id             String     @id @default(cuid()) // 唯一标识符，使用 cuid 自动生成
+  workoutId      String // 关联的训练计划 ID
+  excerciseId    String // 关联的动作 ID
+  orderIndex     Int        @default(0) // 动作在训练计划中的执行顺序（从 0 开始）
+  targetSets     Int? // 个性化目标组数，覆盖动作默认的 sets 值
+  targetReps     Int? // 个性化目标次数，覆盖动作默认的 reps 值
+  targetDuration Int? // 个性化目标时长（秒），用于计时类动作
+  restSeconds    Int? // 组间休息时间（秒）
+  notes          String? // 针对该动作在此计划中的特殊备注或提示
+  createdAt      DateTime   @default(now()) // 记录创建时间
+  workout        Workout    @relation(fields: [workoutId], references: [id], onDelete: Cascade) // 关联关系：所属的训练计划，删除计划时级联删除关联记录
+  excercise      Excercises @relation(fields: [excerciseId], references: [id], onDelete: Cascade) // 关联关系：关联的动作，删除动作时级联删除关联记录
+
+  @@unique([workoutId, excerciseId]) // 确保同一训练计划中每个动作只出现一次
+}
+
+// 动作类别常量
+// 1 = 基础动作 - 最简单、最基础的动作形式，适合新手入门
+// 2 = 力量训练 - 以增加肌肉力量和体积为主要目的的训练
+// 3 = 有氧运动 - 以提高心肺功能和耐力为主的训练
+// 4 = 柔韧性训练 - 以提升关节活动度和身体柔韧性为主
+// 5 = 平衡训练 - 以提升身体平衡和协调能力为主
+// 6 = 爆发力训练 - 以提高爆发力和速度为主的跳跃、投掷等动作
+
+// 难度等级常量
+// 1 = 初学者 - 几乎没有运动经验的人，动作简单、强度低
+// 2 = 中级 - 有一定运动基础，掌握基本动作要领
+// 3 = 高级 - 长期规律训练，能够完成复杂动作
+// 4 = 专业级 - 运动员级别，需要专业指导和监督
