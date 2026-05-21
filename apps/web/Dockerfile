@@ -10,9 +10,10 @@ ENV https_proxy=http://host.docker.internal:7897
 RUN npm config set registry https://registry.npmmirror.com && \
     npm config set proxy http://host.docker.internal:7897 && \
     npm config set https-proxy http://host.docker.internal:7897
-
+    
+RUN npm install -g pnpm
 COPY package*.json ./
-RUN npm install --ignore-scripts
+RUN pnpm install --ignore-scripts
 
 COPY . .
 
