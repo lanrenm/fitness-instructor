@@ -9,7 +9,9 @@ export class DatabaseService implements OnModuleInit {
 
   constructor() {
     this.pool = new Pool({
-      connectionString: process.env.DATABASE_URL || 'postgresql://fitness:fitness0520@postgres:5432/fitness_instructor',
+      connectionString:
+        process.env.DATABASE_URL ||
+        'postgresql://fitness:fitness0520@postgres:5432/fitness_instructor',
     });
   }
 

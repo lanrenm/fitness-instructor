@@ -96,3 +96,39 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## 项目结构
+
+api/
+├── prisma/ # Prisma 核心配置与数据库相关
+│ ├── migrations/ # 数据库迁移文件（自动生成，不要手动修改）
+│ ├── schema.prisma # 核心：定义数据模型、数据库连接和 Prisma 配置
+│ └── seed.ts # （可选）数据库种子脚本，用于初始化测试数据
+├── src/ # 后端应用源代码
+│ ├── common/ # 全局通用的代码
+│ │ ├── decorators/ # 自定义装饰器（如：用户身份提取 @CurrentUser()）
+│ │ ├── filters/ # 全局异常过滤器
+│ │ ├── guards/ # 全局守卫（如：权限校验 AuthGuard）
+│ │ ├── interceptors/ # 全局拦截器（如：统一响应格式 TransformInterceptor）
+│ │ └── pipes/ # 全局管道（如：参数校验 ValidationPipe）
+│ ├── config/ # 配置文件（如环境变量加载、第三方服务配置等）
+│ ├── modules/ # 业务功能模块（项目的核心区域）
+│ │ ├── users/ # 用户模块（示例）
+│ │ │ ├── dto/ # 数据传输对象（如：create-user.dto.ts, update-user.dto.ts）
+│ │ │ ├── entities/ # 实体类（返回给前端的 User 数据结构，可与 Prisma Model 区分开）
+│ │ │ ├── users.controller.ts # 控制器：处理 HTTP 请求路由
+│ │ │ ├── users.service.ts # 服务层：处理具体的业务逻辑和 Prisma 数据库操作
+│ │ │ └── users.module.ts # 模块文件：组织该模块的内部依赖
+│ │ ├── auth/ # 认证授权模块（登录、注册、JWT 策略等）
+│ │ └── posts/ # 其他业务模块...
+│ ├── prisma/ # NestJS 封装的 Prisma 服务
+│ │ ├── prisma.service.ts # 继承 PrismaClient，管理数据库的连接与断开生命周期
+│ │ └── prisma.module.ts # 全局 Prisma 模块，导出 PrismaService 供其他模块注入使用
+│ ├── app.module.ts # 应用的根模块，负责导入所有全局模块和业务模块
+│ └── main.ts # 应用的入口文件，负责启动 NestJS 服务
+├── test/ # 自动化测试目录（单元测试 e2e 测试）
+├── .env # 环境变量（存放 DATABASE_URL、JWT_SECRET 等敏感信息）
+├── .gitignore # Git 忽略文件配置
+├── nest-cli.json # NestJS CLI 的构建配置
+├── package.json # 项目依赖与 npm scripts 脚本
+└── tsconfig.json # TypeScript 编译配置

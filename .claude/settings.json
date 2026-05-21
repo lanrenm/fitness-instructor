@@ -1,0 +1,7 @@
+{
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "mcp-server-dev@claude-plugins-official": true,
+    "figma@claude-plugins-official": true
+  }
+}
