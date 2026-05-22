@@ -8,6 +8,7 @@ RUN npm config set registry https://registry.npmmirror.com && \
 
 RUN npm install -g pnpm
 COPY package*.json ./
+COPY ../../packages/ui-components ./packages/ui-components
 RUN pnpm install --ignore-scripts
 
 COPY . .
