@@ -10,20 +10,26 @@ ENV https_proxy=http://host.docker.internal:7897
 RUN npm config set registry https://registry.npmmirror.com && \
     npm config set proxy http://host.docker.internal:7897 && \
     npm config set https-proxy http://host.docker.internal:7897
-    
-RUN npm install -g pnpm
-COPY package*.json ./
-RUN pnpm install --ignore-scripts
 
+RUN npm install -g pnpm
+
+COPY package*.json ./
 COPY . .
 
-# 在容器启动时重建 native modules（适配 Linux 环境）
-# 并设置 NAPI_RS 强制使用 GNU binding
-RUN echo '#!/bin/sh\n\
-npm rebuild\n\
-exec npm run dev -- --host 0.0.0.0' > /start.sh && chmod +x /start.sh
+# pnpm install
+RUN pnpm install
+
+# 为 native modules 创建目录和软链接，解决 pnpm isolated linker 下 .node 文件路径不对的问题
+# rolldown 和 @tailwindcss/oxide 的 JS 代码期望 .node 文件在包目录下
+RUN cd node_modules && \
+    mkdir -p @rolldown/binding-linux-arm64-gnu && \
+    ln -sf ../.pnpm/@rolldown+binding-linux-arm64-gnu@1.0.2/node_modules/@rolldown/binding-linux-arm64-gnu/rolldown-binding.linux-arm64-gnu.node \
+        @rolldown/binding-linux-arm64-gnu/rolldown-binding.linux-arm64-gnu.node && \
+    ln -sf ../.pnpm/@tailwindcss+oxide-linux-arm64-gnu@4.3.0/node_modules/@tailwindcss/oxide-linux-arm64-gnu/tailwindcss-oxide.linux-arm64-gnu.node \
+        @tailwindcss/oxide/tailwindcss-oxide.linux-arm64-gnu.node && \
+    ln -sf ../.pnpm/lightningcss-linux-arm64-gnu@1.32.0/node_modules/lightningcss-linux-arm64-gnu/lightningcss.linux-arm64-gnu.node \
+        lightningcss/lightningcss.linux-arm64-gnu.node
 
 EXPOSE 5173
 
-# 覆盖默认 CMD，使用启动脚本
-CMD ["/start.sh"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

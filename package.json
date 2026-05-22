@@ -1,0 +1,9 @@
+{
+  "name": "fitness-instructor",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --parallel -m dev",
+    "build": "pnpm -r --filter --sequential build",
+    "build:ui-components": "pnpm --filter @fitness/ui-components build"
+  }
+}

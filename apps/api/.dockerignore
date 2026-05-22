@@ -1,0 +1,7 @@
+# .dockerignore 文件内容示例
+.git
+node_modules
+*.log
+.DS_Store
+npm-debug.log*
+pnpm-debug.log*

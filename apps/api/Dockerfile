@@ -7,10 +7,11 @@ RUN npm config set registry https://registry.npmmirror.com && \
     npm config set https-proxy http://host.docker.internal:7897
     
 RUN npm install -g pnpm
-COPY package*.json ./
-RUN pnpm install  --ignore-scripts
 
+COPY package*.json ./
 COPY . .
+
+RUN pnpm install  --ignore-scripts
 
 EXPOSE 3001
 
