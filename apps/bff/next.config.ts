@@ -6,10 +6,11 @@ const nextConfig: NextConfig = {
   webpack: (config) => {
     config.resolve.alias["@fitness/ui-components"] = path.resolve(
       __dirname,
-      "../../packages/ui-components/dist/index.js"
+      "./node_modules/@fitness/ui-components/dist/index.mjs"
     );
     return config;
   },
+  turbopack: {}
 };
 
 export default nextConfig;

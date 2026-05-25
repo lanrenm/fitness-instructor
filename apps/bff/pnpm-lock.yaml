@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@fitness/ui-components':
         specifier: file:../../packages/ui-components
-        version: file:../../packages/ui-components(@types/react@19.2.15)(react@19.2.4)(tailwindcss@4.3.0)
+        version: file:../../packages/ui-components(@types/react@19.2.15)(tailwindcss@4.3.0)
       '@radix-ui/react-slot':
         specifier: ^1.2.4
         version: 1.2.4(@types/react@19.2.15)(react@19.2.4)
@@ -1894,6 +1894,10 @@ packages:
     resolution: {integrity: sha512-9nfp2hYpCwOjAN+8TZFGhtWEwgvWHXqESH8qT89AT/lWklpLON22Lc8pEtnpsZz7VmawabSU0gCjnj8aC0euHQ==}
     engines: {node: '>=0.10.0'}
 
+  react@19.2.6:
+    resolution: {integrity: sha512-sfWGGfavi0xr8Pg0sVsyHMAOziVYKgPLNrS7ig+ivMNb3wbCBw3KxtflsGBAwD3gYQlE/AEZsTLgToRrSCjb0Q==}
+    engines: {node: '>=0.10.0'}
+
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
     engines: {node: '>= 0.4'}
@@ -2391,17 +2395,17 @@ snapshots:
       '@eslint/core': 0.17.0
       levn: 0.4.1
 
-  '@fitness/ui-components@file:../../packages/ui-components(@types/react@19.2.15)(react@19.2.4)(tailwindcss@4.3.0)':
+  '@fitness/ui-components@file:../../packages/ui-components(@types/react@19.2.15)(tailwindcss@4.3.0)':
     dependencies:
-      '@radix-ui/react-slot': 1.2.4(@types/react@19.2.15)(react@19.2.4)
+      '@radix-ui/react-slot': 1.2.4(@types/react@19.2.15)(react@19.2.6)
       class-variance-authority: 0.7.1
       clsx: 2.1.1
-      lucide-react: 0.300.0(react@19.2.4)
+      lucide-react: 0.300.0(react@19.2.6)
+      react: 19.2.6
       tailwind-merge: 2.6.1
       tailwindcss-animate: 1.0.7(tailwindcss@4.3.0)
     transitivePeerDependencies:
       - '@types/react'
-      - react
       - tailwindcss
 
   '@humanfs/core@0.19.2':
@@ -2619,10 +2623,23 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.15
 
+  '@radix-ui/react-compose-refs@1.1.2(@types/react@19.2.15)(react@19.2.6)':
+    dependencies:
+      react: 19.2.6
+    optionalDependencies:
+      '@types/react': 19.2.15
+
   '@radix-ui/react-slot@1.2.4(@types/react@19.2.15)(react@19.2.4)':
     dependencies:
       '@radix-ui/react-compose-refs': 1.1.2(@types/react@19.2.15)(react@19.2.4)
       react: 19.2.4
+    optionalDependencies:
+      '@types/react': 19.2.15
+
+  '@radix-ui/react-slot@1.2.4(@types/react@19.2.15)(react@19.2.6)':
+    dependencies:
+      '@radix-ui/react-compose-refs': 1.1.2(@types/react@19.2.15)(react@19.2.6)
+      react: 19.2.6
     optionalDependencies:
       '@types/react': 19.2.15
 
@@ -3890,9 +3907,9 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-react@0.300.0(react@19.2.4):
+  lucide-react@0.300.0(react@19.2.6):
     dependencies:
-      react: 19.2.4
+      react: 19.2.6
 
   lucide-react@1.16.0(react@19.2.4):
     dependencies:
@@ -4096,6 +4113,8 @@ snapshots:
   react-is@16.13.1: {}
 
   react@19.2.4: {}
+
+  react@19.2.6: {}
 
   reflect.getprototypeof@1.0.10:
     dependencies:
