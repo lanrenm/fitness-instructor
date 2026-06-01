@@ -32,6 +32,9 @@ export default function AuthPage() {
 
   const switchForm = (toLogin: boolean) => {
     if (toLogin === isLogin) return;
+    setError('');
+    setLoginData({ phonenumber: '', password: '' });
+    setRegisterData({ phonenumber: '', name: '', password: '', confirmPassword: '' });
     setAnimDirection(toLogin ? 'down' : 'up');
     setAnimating(true);
     setTimeout(() => {
@@ -176,6 +179,7 @@ export default function AuthPage() {
                       placeholder="手机号"
                       required
                     />
+                    <span className={styles.requiredBadge}>*</span>
                   </div>
                 </div>
                 <div className={styles.inputGroup}>
@@ -190,6 +194,7 @@ export default function AuthPage() {
                       placeholder="密码"
                       required
                     />
+                    <span className={styles.requiredBadge}>*</span>
                   </div>
                 </div>
                 <button
@@ -214,6 +219,7 @@ export default function AuthPage() {
                       placeholder="手机号"
                       required
                     />
+                    <span className={styles.requiredBadge}>*</span>
                   </div>
                 </div>
                 <div className={styles.inputGroup}>
@@ -228,6 +234,7 @@ export default function AuthPage() {
                       placeholder="昵称"
                       required
                     />
+                    <span className={styles.requiredBadge}>*</span>
                   </div>
                 </div>
                 <div className={styles.inputGroup}>
@@ -242,6 +249,7 @@ export default function AuthPage() {
                       placeholder="密码"
                       required
                     />
+                    <span className={styles.requiredBadge}>*</span>
                   </div>
                 </div>
                 <div className={styles.inputGroup}>
@@ -256,6 +264,7 @@ export default function AuthPage() {
                       placeholder="确认密码"
                       required
                     />
+                    <span className={styles.requiredBadge}>*</span>
                   </div>
                 </div>
                 <button
