@@ -18,8 +18,10 @@
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "tailwindcss": "^4.3.0",
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "postcss": "^8.5.15",
     "zustand": "^5.0.13"
   },
   "devDependencies": {
@@ -31,8 +33,6 @@
     "autoprefixer": "^10.5.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
-    "postcss": "^8.5.15",
-    "tailwindcss": "^4.3.0",
     "typescript": "^5"
   }
 }
