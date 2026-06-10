@@ -14,7 +14,10 @@ npm-debug.log*
 # ===========================================
 # 文档
 # ===========================================
-docs/
+# 顶层 docs/ 下的设计文档不纳入版本控制（参考 docs/login-registration-design.md）
+# 但 design specs（spec-driven 开发产出）需要共享
+docs/*
+!docs/superpowers/
 
 # PostgreSQL 数据持久化（本地开发可忽略）
 services/postgres/data/
