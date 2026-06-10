@@ -1,16 +1,24 @@
 import type { NextConfig } from "next";
 import path from "path";
 
+const uiComponentsDist = path.resolve(
+  __dirname,
+  "./node_modules/@fitness/ui-components/dist/index.mjs"
+);
+const uiComponentsDistRelative =
+  "./node_modules/@fitness/ui-components/dist/index.mjs";
+
 const nextConfig: NextConfig = {
   transpilePackages: ["@fitness/ui-components"],
   webpack: (config) => {
-    config.resolve.alias["@fitness/ui-components"] = path.resolve(
-      __dirname,
-      "./node_modules/@fitness/ui-components/dist/index.mjs"
-    );
+    config.resolve.alias["@fitness/ui-components"] = uiComponentsDist;
     return config;
   },
-  turbopack: {},
+  turbopack: {
+    resolveAlias: {
+      "@fitness/ui-components": uiComponentsDistRelative,
+    },
+  },
   headers: () => {
     return [
       {
