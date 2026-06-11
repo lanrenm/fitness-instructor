@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "concurrently -n next,rspack -c blue,green \"next dev\" \"pnpm dev:remote\"",
-    "dev:remote": "rspack watch",
+    "dev:remote": "rspack build --watch --mode development",
     "build": "pnpm build:remote && next build",
     "build:remote": "rspack build",
     "start": "next start",
