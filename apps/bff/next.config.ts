@@ -43,21 +43,15 @@ const nextConfig: NextConfig = {
         ]
       },
       {
-        source: "/auth",
+        source: '/mf-auth/:path*',
         headers: [
           {
-            key: "Content-Type",
-            value: "text/html",
+            key: 'Access-Control-Allow-Origin',
+            value: process.env.WEB_ORIGIN ?? 'http://localhost:5173',
           },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: '*' },
         ],
-      },
-    ];
-  },
-  rewrites: async () => {
-    return [
-      {
-        source: "/auth",
-        destination: "http://127.0.0.1:3000/auth",
       },
     ];
   },
