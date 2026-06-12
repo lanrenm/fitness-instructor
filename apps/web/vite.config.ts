@@ -34,6 +34,10 @@ export default defineConfig(({ mode }) => {
     ],
     server: {
       proxy: {
+        '/api': {
+          target: 'http://host.docker.internal:3000',
+          changeOrigin: true,
+        },
         '/bff': {
           target: 'http://host.docker.internal:3000',
           changeOrigin: true,
