@@ -29,3 +29,19 @@ declare module '*.webp' {
   const content: string;
   export default content;
 }
+
+declare module 'bff_auth/AuthPage' {
+  import type { ComponentType } from 'react';
+
+  interface AuthSuccessPayload {
+    accessToken: string;
+    refreshToken: string;
+  }
+
+  type AuthPageProps = {
+    onSuccess: (data: AuthSuccessPayload) => void;
+  };
+
+  const AuthPage: ComponentType<AuthPageProps>;
+  export default AuthPage;
+}
