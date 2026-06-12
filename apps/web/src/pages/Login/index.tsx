@@ -17,6 +17,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [AuthPage, setAuthPage] = useState<AuthPageComponent | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [usingMemoryStorage, setUsingMemoryStorage] = useState(false);
 
   const loadAuthPage = async () => {
     setLoadError(null);
@@ -34,7 +35,10 @@ export default function LoginPage() {
   }, []);
 
   const handleAuthSuccess = (data: AuthSuccessPayload) => {
-    login(data.accessToken, data.refreshToken);
+    const { mode } = login(data.accessToken, data.refreshToken);
+    if (mode === 'memory') {
+      setUsingMemoryStorage(true);
+    }
   };
 
   if (loadError) {
@@ -61,5 +65,17 @@ export default function LoginPage() {
     );
   }
 
-  return <AuthPage onSuccess={handleAuthSuccess} />;
+  return (
+    <>
+      {usingMemoryStorage && (
+        <div
+          role="status"
+          className="fixed top-0 left-0 right-0 z-50 bg-yellow-100 border-b border-yellow-300 text-yellow-900 text-sm text-center py-2 px-4"
+        >
+          当前浏览器禁用了本地存储，登录态仅在当前页面有效，刷新后需重新登录。
+        </div>
+      )}
+      <AuthPage onSuccess={handleAuthSuccess} />
+    </>
+  );
 }

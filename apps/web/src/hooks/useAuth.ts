@@ -4,9 +4,10 @@ import { authService } from '../services/authService';
 export function useAuth() {
   const navigate = useNavigate();
 
-  const login = (accessToken: string, refreshToken: string) => {
-    authService.setTokens(accessToken, refreshToken);
+  const login = (accessToken: string, refreshToken: string): { mode: 'local' | 'memory' } => {
+    const result = authService.setTokens(accessToken, refreshToken);
     navigate('/');
+    return result;
   };
 
   const logout = () => {

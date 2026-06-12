@@ -68,6 +68,11 @@ interface IAuthResponse {
 const BFF_BASE = import.meta.env.VITE_BFF_URL || 'http://localhost:3000';
 
 /**
+ * @description 内存兜底存储（用于 localStorage 不可用场景，例如 Safari 隐私模式 / 配额超限）
+ */
+let memoryTokens: { accessToken: string; refreshToken: string } | null = null;
+
+/**
  * @description 认证服务
  */
 export const authService = {
@@ -108,29 +113,50 @@ export const authService = {
   },
 
   /**
-   * @description 获取访问令牌
+   * @description 获取访问令牌（localStorage 优先，回退到内存）
    * @returns 令牌字符串或 null
    */
   getAccessToken(): string | null {
-    return localStorage.getItem('accessToken');
+    return localStorage.getItem('accessToken') ?? memoryTokens?.accessToken ?? null;
   },
 
   /**
    * @description 存储令牌
+   * @description 先写入内存兜底，再尝试 localStorage；任一失败不抛出
    * @param accessToken 访问令牌
    * @param refreshToken 刷新令牌
+   * @returns 存储模式：'local' 表示 localStorage 写入成功，'memory' 表示降级到内存
    */
-  setTokens(accessToken: string, refreshToken: string): void {
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+  setTokens(accessToken: string, refreshToken: string): { mode: 'local' | 'memory' } {
+    memoryTokens = { accessToken, refreshToken };
+    try {
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      return { mode: 'local' };
+    } catch {
+      return { mode: 'memory' };
+    }
   },
 
   /**
-   * @description 清除令牌
+   * @description 清除令牌（同时清理 localStorage 与内存兜底）
    */
   clearTokens(): void {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    memoryTokens = null;
+    try {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+    } catch {
+      // localStorage 不可用时内存兜底已通过 memoryTokens = null 清理
+    }
+  },
+
+  /**
+   * @description 获取刷新令牌（localStorage 优先，回退到内存）
+   * @returns 令牌字符串或 null
+   */
+  getRefreshToken(): string | null {
+    return localStorage.getItem('refreshToken') ?? memoryTokens?.refreshToken ?? null;
   },
 
   /**
