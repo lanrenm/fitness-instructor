@@ -44,3 +44,4 @@ next-env.d.ts
 # Rspack Module Federation build artifacts
 .mf/
 /public/mf-auth/
+/public/mf-auth-embed/
