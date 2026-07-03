@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n next,rspack -c blue,green \"next dev\" \"pnpm dev:remote\"",
+    "dev": "concurrently --kill-others -n next,rspack,embed -c blue,green,magenta \"next dev\" \"pnpm dev:remote\" \"pnpm dev:embed\"",
     "dev:remote": "rspack build --watch --mode development",
-    "build": "pnpm build:remote && next build",
+    "dev:embed": "rspack build --watch --config rspack.embed.config.mjs --mode development",
+    "build": "pnpm build:remote && pnpm build:embed && next build",
     "build:remote": "rspack build",
+    "build:embed": "rspack build --config rspack.embed.config.mjs",
     "start": "next start",
     "lint": "eslint"
   },
@@ -40,6 +42,7 @@
     "css-loader": "^7.1.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "postcss-loader": "^8.2.1",
     "style-loader": "^4.0.0",
     "typescript": "^5"
   }

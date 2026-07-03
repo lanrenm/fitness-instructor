@@ -53,6 +53,17 @@ const nextConfig: NextConfig = {
           { key: 'Access-Control-Allow-Headers', value: '*' },
         ],
       },
+      {
+        source: '/mf-auth-embed/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: process.env.WEB_ORIGIN ?? 'http://localhost:5173',
+          },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: '*' },
+        ],
+      },
     ];
   },
 };

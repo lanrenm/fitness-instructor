@@ -26,8 +26,10 @@ RUN sed -i 's|"@fitness/ui-components": "file:../../packages/ui-components"|"@fi
 
 # 配置 hoisted 模式
 RUN echo "node-linker=hoisted" > .npmrc
-# 安装根目录依赖
-RUN pnpm install --ignore-scripts
+# pnpm 11 在非交互终端下默认拒绝 purge modules dir — 显式确认才能完成 install
+ENV CI=true
+# 安装根目录依赖。--no-frozen-lockfile 让 lockfile 在加新包（postcss-loader）后可重写
+RUN pnpm install --ignore-scripts --no-frozen-lockfile
 
 # 5. 备份 node_modules (关键步骤)
 # 此时 node_modules 包含了正确构建的 @fitness/ui-components
