@@ -6,6 +6,7 @@ ENV HTTP_PROXY=http://host.docker.internal:7897
 ENV HTTPS_PROXY=http://host.docker.internal:7897
 ENV http_proxy=http://host.docker.internal:7897
 ENV https_proxy=http://host.docker.internal:7897
+ENV CI=true
 
 RUN npm config set registry https://registry.npmmirror.com && \
     npm config set proxy http://host.docker.internal:7897 && \
@@ -16,19 +17,35 @@ RUN npm install -g pnpm
 COPY package*.json ./
 COPY . .
 
-# pnpm install
-RUN pnpm install
+# 1) Install dev deps for ui-components, then build it so packages/ui-components
+#    has a populated dist/. (Mirrors apps/bff/Dockerfile — same monorepo pattern.)
+WORKDIR /app/packages/ui-components
+RUN pnpm install --ignore-scripts && pnpm build
 
-# 为 native modules 创建目录和软链接，解决 pnpm isolated linker 下 .node 文件路径不对的问题
-# rolldown 和 @tailwindcss/oxide 的 JS 代码期望 .node 文件在包目录下
-RUN cd node_modules && \
-    mkdir -p @rolldown/binding-linux-arm64-gnu && \
-    ln -sf ../.pnpm/@rolldown+binding-linux-arm64-gnu@1.0.2/node_modules/@rolldown/binding-linux-arm64-gnu/rolldown-binding.linux-arm64-gnu.node \
-        @rolldown/binding-linux-arm64-gnu/rolldown-binding.linux-arm64-gnu.node && \
-    ln -sf ../.pnpm/@tailwindcss+oxide-linux-arm64-gnu@4.3.0/node_modules/@tailwindcss/oxide-linux-arm64-gnu/tailwindcss-oxide.linux-arm64-gnu.node \
-        @tailwindcss/oxide/tailwindcss-oxide.linux-arm64-gnu.node && \
-    ln -sf ../.pnpm/lightningcss-linux-arm64-gnu@1.32.0/node_modules/lightningcss-linux-arm64-gnu/lightningcss.linux-arm64-gnu.node \
-        lightningcss/lightningcss.linux-arm64-gnu.node
+# 2) Back to the workspace root for the full install.
+WORKDIR /app
+RUN pnpm install --ignore-scripts
+
+# 3) @fitness/ui-components is referenced from vite.config.ts (federation
+#    shared), but not declared in apps/web/package.json, so pnpm 11 hoisted
+#    mode materialises it into node_modules *before* the build above runs,
+#    and won't refresh the copy afterwards ("Already up to date"). Re-stamp
+#    the dist/ tree from the now-built source so the runtime import resolves.
+#    Also: packages/ui-components/package.json declares `exports: "./dist/index.js"`
+#    but tsup (`format: ['esm']`) produces `index.mjs`. Vite's esbuild pre-bundle
+#    is strict about the exports map and ERR_PACKAGE_PATH_NOT_EXPORTEDs on
+#    mismatch — rename to keep web working until that source-level fix lands.
+#    (BFF tolerates this because rspack's module resolver is loose; this is a
+#    latent bug in packages/ui-components, not introduced by the MF migration.)
+RUN if [ -d /app/node_modules/@fitness/ui-components ]; then \
+      rm -rf /app/node_modules/@fitness/ui-components/dist && \
+      cp -a /app/packages/ui-components/dist /app/node_modules/@fitness/ui-components/dist && \
+      if [ -f /app/node_modules/@fitness/ui-components/dist/index.mjs ] && \
+         [ ! -f /app/node_modules/@fitness/ui-components/dist/index.js ]; then \
+        mv /app/node_modules/@fitness/ui-components/dist/index.mjs \
+           /app/node_modules/@fitness/ui-components/dist/index.js; \
+      fi; \
+    fi
 
 EXPOSE 5173
 

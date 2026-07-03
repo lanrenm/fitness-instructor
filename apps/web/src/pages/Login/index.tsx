@@ -1,45 +1,147 @@
-import { useEffect, useState } from 'react';
-import type { ComponentType } from 'react';
-import { useAuth } from '../../hooks/useAuth';
+import { useEffect, useRef, useState } from 'react';
 
-interface AuthSuccessPayload {
-  accessToken: string;
-  refreshToken: string;
+interface EmbedResponse {
+  html: string;
+  /**
+   * Server-fetched CSS contents, in the order Next.js's CSS pipeline
+   * emitted the corresponding <link rel="stylesheet"> tags. Injected as
+   * <style> tags (NOT <link>) to avoid Next.js dev's blockCrossSiteDEV
+   * 403 on cross-origin Referer fetches of /_next/static/*. See
+   * apps/bff/src/app/api/embed/auth/route.ts for the full rationale.
+   */
+  inlineCss: string[];
+  /**
+   * Step 2a: URL of the BFF-built standalone embed bundle
+   * (apps/bff/rspack.embed.config.mjs → public/mf-auth/embed.js). The
+   * bundle exports window.__AUTH_EMBED_MOUNT__(shadowRoot, hostElement)
+   * and mounts AuthPage with its own inlined React 19.2.4 inside the
+   * shadow root. Cross-shadow-boundary success events come back as
+   * `auth-success` CustomEvents on the host element.
+   */
+  bundleUrl: string;
 }
 
-type AuthPageProps = {
-  onSuccess: (data: AuthSuccessPayload) => void;
-};
-
-type AuthPageComponent = ComponentType<AuthPageProps>;
-
 export default function LoginPage() {
-  const { login } = useAuth();
-  const [AuthPage, setAuthPage] = useState<AuthPageComponent | null>(null);
+  const [embed, setEmbed] = useState<EmbedResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [usingMemoryStorage, setUsingMemoryStorage] = useState(false);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const unmountRef = useRef<(() => void) | null>(null);
 
-  const loadAuthPage = async () => {
+  const loadEmbed = async () => {
     setLoadError(null);
     try {
-      const mod = await import('bff_auth/AuthPage');
-      setAuthPage(() => mod.default);
+      const res = await fetch('/api/embed/auth');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: EmbedResponse = await res.json();
+      setEmbed(data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : '未知错误';
-      setLoadError(message);
+      setLoadError(err instanceof Error ? err.message : '未知错误');
     }
   };
 
   useEffect(() => {
-    loadAuthPage();
+    loadEmbed();
   }, []);
 
-  const handleAuthSuccess = (data: AuthSuccessPayload) => {
-    const { mode } = login(data.accessToken, data.refreshToken);
-    if (mode === 'memory') {
-      setUsingMemoryStorage(true);
+  // Listen for the bundle's `auth-success` CustomEvent. composed:true
+  // on the bundle side lets it traverse the shadow boundary and reach
+  // this listener on the host element. Detached once on unmount.
+  useEffect(() => {
+    const hostEl = hostRef.current;
+    if (!hostEl) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      // Step 2b: persist tokens, navigate. For now just log — the goal
+      // here is to prove the cross-shadow-boundary event path works.
+      // eslint-disable-next-line no-console
+      console.log('[web] auth-success:', detail);
+    };
+    hostEl.addEventListener('auth-success', handler);
+    return () => hostEl.removeEventListener('auth-success', handler);
+  }, []);
+
+  // Step 2a: build the shadow DOM, inject first-paint HTML+CSS, load
+  // the bundle, hand off to its mount function. Tear down on unmount
+  // (route change, retry after error, etc.).
+  useEffect(() => {
+    if (!embed || !hostRef.current) return;
+    const hostEl = hostRef.current;
+
+    // attachShadow can only be called ONCE per host element — calling
+    // it twice throws NotSupportedError. React StrictMode runs effects
+    // twice in dev (mount → cleanup → mount) to surface this kind of
+    // non-idempotent bug. We reuse any existing shadow root instead
+    // of re-attaching; the cleanup function below clears the shadow
+    // contents so the second mount starts clean.
+    let shadow: ShadowRoot;
+    if (hostEl.shadowRoot) {
+      shadow = hostEl.shadowRoot;
+      shadow.innerHTML = '';
+    } else {
+      shadow = hostEl.attachShadow({ mode: 'open' });
     }
-  };
+
+    // First-paint: SSR HTML + Next.js's CSS chunks (Step 1 leftovers).
+    // The SSR HTML uses Next.js's CSS Module hash format, which does
+    // NOT match the bundle's class names — so once React mounts and
+    // the bundle's CSS takes over, we remove the SSR scaffolding.
+    if (embed.inlineCss.length) {
+      const ssrStyle = document.createElement('style');
+      ssrStyle.dataset.authEmbedSrc = 'ssr';
+      ssrStyle.textContent = embed.inlineCss.join('\n');
+      shadow.appendChild(ssrStyle);
+    }
+
+    const ssrContainer = document.createElement('div');
+    ssrContainer.dataset.authEmbedSrc = 'ssr';
+    ssrContainer.innerHTML = embed.html;
+    shadow.appendChild(ssrContainer);
+
+    // Load the embed bundle. <script src> inside a shadow root DOES
+    // execute (BFF's next.config.ts has CORS headers for
+    // /mf-auth-embed/*). The bundle uses style-loader's lazy mode —
+    // styles are NOT injected at script-eval time. mountAuthPage
+    // (called from this onload) calls .use() on each CSS module and
+    // moves the resulting <style> tags into the shadow root.
+    const script = document.createElement('script');
+    script.src = embed.bundleUrl;
+    script.onload = () => {
+      const mount = (window as Window & {
+        __AUTH_EMBED_MOUNT__?: (
+          shadowRoot: ShadowRoot,
+          hostElement: HTMLElement,
+        ) => () => void;
+      }).__AUTH_EMBED_MOUNT__;
+      if (typeof mount !== 'function') {
+        // eslint-disable-next-line no-console
+        console.error('[web] __AUTH_EMBED_MOUNT__ missing after bundle load');
+        return;
+      }
+      // mount() triggers lazy style injection (lands in document.head)
+      // and moves each <style> into the shadow root, then renders
+      // <AuthPage/> via createRoot.
+      unmountRef.current = mount(shadow, hostEl);
+      // SSR scaffolding no longer needed — its Next.js class names
+      // don't match the bundle's CSS, so it would render unstyled
+      // alongside the React tree.
+      ssrContainer.remove();
+    };
+    script.onerror = () => {
+      // eslint-disable-next-line no-console
+      console.error('[web] failed to load embed bundle:', embed.bundleUrl);
+    };
+    shadow.appendChild(script);
+
+    return () => {
+      unmountRef.current?.();
+      unmountRef.current = null;
+      // Clear shadow contents for StrictMode's re-mount. attachShadow
+      // can only be called once per host, so we keep the same shadow
+      // root and reset it via innerHTML = ''. The next mount's mount()
+      // call re-injects CSS via .use() and re-renders the React tree.
+      shadow.innerHTML = '';
+    };
+  }, [embed]);
 
   if (loadError) {
     return (
@@ -48,7 +150,7 @@ export default function LoginPage() {
           认证模块加载失败：{loadError}
         </p>
         <button
-          onClick={loadAuthPage}
+          onClick={loadEmbed}
           className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
         >
           点击重试
@@ -57,7 +159,7 @@ export default function LoginPage() {
     );
   }
 
-  if (!AuthPage) {
+  if (!embed) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-gray-500">加载中...</p>
@@ -65,17 +167,6 @@ export default function LoginPage() {
     );
   }
 
-  return (
-    <>
-      {usingMemoryStorage && (
-        <div
-          role="status"
-          className="fixed top-0 left-0 right-0 z-50 bg-yellow-100 border-b border-yellow-300 text-yellow-900 text-sm text-center py-2 px-4"
-        >
-          当前浏览器禁用了本地存储，登录态仅在当前页面有效，刷新后需重新登录。
-        </div>
-      )}
-      <AuthPage onSuccess={handleAuthSuccess} />
-    </>
-  );
+  // The host element. Everything inside lives in the shadow root.
+  return <div ref={hostRef} data-auth-embed-host="" />;
 }
