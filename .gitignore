@@ -5,6 +5,8 @@ node_modules/
 dist/
 *.log
 npm-debug.log*
+# 本地 pnpm 缓存目录（避免被误提交；store-dir 未配置时不使用）
+.pnpm-store/
 
 # ===========================================
 # Docker

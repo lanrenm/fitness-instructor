@@ -8,3 +8,8 @@ allowBuilds:
   prisma: false
   sharp: false
   unrs-resolver: false
+nodeLinker: hoisted
+publicHoistPattern:
+  - '*linux-arm64*'
+  - '*rolldown-binding*'
+  - '*lightningcss.linux*'
