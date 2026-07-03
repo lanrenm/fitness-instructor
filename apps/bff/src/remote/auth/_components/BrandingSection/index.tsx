@@ -1,5 +1,7 @@
 import React from 'react';
-import styles from './index.module.css';
+// style-loader v4 + lazyStyleTag: see AuthPage/index.tsx for rationale.
+import _styles from './index.module.css';
+const styles = _styles.locals ?? _styles;
 
 const index: React.FC<object> = ({}) => {
   return (

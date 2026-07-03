@@ -7,7 +7,18 @@ import BrandingSection from '../BrandingSection';
 import LoginForm, { type AuthSuccessPayload } from '../LoginForm';
 import RegisterForm from '../RegisterForm';
 import { useAuthMode } from '../../_hooks/useAuthMode';
-import styles from './index.module.css';
+// style-loader v4 with `lazyStyleTag` returns a runtime object
+// `{ use, unuse, locals }` as the module default. Class names live on
+// `.locals` (populated by the inner css-loader). The companion
+// embed-mount.tsx imports the same module and calls `.use()` on it
+// (needs the runtime); components only need the className map.
+//
+// Turbopack (used by BFF's Next.js dev for SSR) returns the locals
+// object DIRECTLY as the default export — no `use`/`unuse`, no `.locals`
+// wrapper. The `?? _styles` fallback keeps the same source file working
+// under both bundlers without a per-file runtime detect.
+import _styles from './index.module.css';
+const styles = _styles.locals ?? _styles;
 
 interface AuthPageProps {
   /** 登录/注册成功后由父组件决定 token 存储与跳转 */

@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { Lock, Phone } from 'lucide-react';
-import styles from './index.module.css';
+// style-loader v4 + lazyStyleTag: see AuthPage/index.tsx for rationale.
+import _styles from './index.module.css';
+const styles = _styles.locals ?? _styles;
 
 export interface AuthSuccessPayload {
   accessToken: string;

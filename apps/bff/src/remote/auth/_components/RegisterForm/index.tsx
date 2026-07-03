@@ -4,7 +4,9 @@ import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { Lock, Phone, User } from 'lucide-react';
 import type { AuthSuccessPayload } from '../LoginForm';
-import styles from './index.module.css';
+// style-loader v4 + lazyStyleTag: see AuthPage/index.tsx for rationale.
+import _styles from './index.module.css';
+const styles = _styles.locals ?? _styles;
 
 interface RegisterFormProps {
   /** 由父组件传入：用于展示错误信息（错误展示在表单之外的卡片上） */
