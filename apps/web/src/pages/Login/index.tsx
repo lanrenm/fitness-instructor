@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { authService } from '../../services/authService';
 
 interface EmbedResponse {
   html: string;
@@ -26,6 +28,7 @@ export default function LoginPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const unmountRef = useRef<(() => void) | null>(null);
+  const navigate = useNavigate();
 
   const loadEmbed = async () => {
     setLoadError(null);
@@ -50,15 +53,24 @@ export default function LoginPage() {
     const hostEl = hostRef.current;
     if (!hostEl) return;
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      // Step 2b: persist tokens, navigate. For now just log — the goal
-      // here is to prove the cross-shadow-boundary event path works.
-      // eslint-disable-next-line no-console
-      console.log('[web] auth-success:', detail);
+      const { accessToken, refreshToken } = (e as CustomEvent).detail ?? {};
+      if (!accessToken || !refreshToken) {
+        // eslint-disable-next-line no-console
+        console.error('[web] auth-success missing tokens:', (e as CustomEvent).detail);
+        return;
+      }
+      // authService.setTokens writes memory first then tries localStorage;
+      // returning { mode } so we could surface "running in private mode"
+      // to the user, but we don't need to here — the navigate happens
+      // regardless of which storage backend accepted the tokens.
+      authService.setTokens(accessToken, refreshToken);
+      // replace:true so the browser back button after Home doesn't drop
+      // the user back into the (now-redirecting) login page.
+      navigate('/', { replace: true });
     };
     hostEl.addEventListener('auth-success', handler);
     return () => hostEl.removeEventListener('auth-success', handler);
-  }, []);
+  }, [navigate]);
 
   // Step 2a: build the shadow DOM, inject first-paint HTML+CSS, load
   // the bundle, hand off to its mount function. Tear down on unmount
