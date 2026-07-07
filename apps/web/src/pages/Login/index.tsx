@@ -46,12 +46,25 @@ export default function LoginPage() {
     loadEmbed();
   }, []);
 
-  // Listen for the bundle's `auth-success` CustomEvent. composed:true
-  // on the bundle side lets it traverse the shadow boundary and reach
-  // this listener on the host element. Detached once on unmount.
+  // Step 2a: build the shadow DOM, inject first-paint HTML+CSS, load
+  // the bundle, hand off to its mount function. Tear down on unmount
+  // (route change, retry after error, etc.).
+  //
+  // The auth-success CustomEvent listener is registered INSIDE this
+  // effect (not in a separate one), because the host <div> doesn't
+  // exist until the `if (!embed)` guard above returns true — the first
+  // render JSX is the "加载中..." placeholder, and `hostRef.current`
+  // is null until the placeholder is replaced by the real host div on
+  // the post-embed re-render. A standalone useEffect would capture
+  // null on mount and never re-run (deps `[navigate]` don't change
+  // across the embed-state update).
   useEffect(() => {
+    if (!embed || !hostRef.current) return;
     const hostEl = hostRef.current;
-    if (!hostEl) return;
+
+    // Listen for the bundle's `auth-success` CustomEvent. composed:true
+    // on the bundle side lets it traverse the shadow boundary and reach
+    // this listener on the host element.
     const handler = (e: Event) => {
       const { accessToken, refreshToken } = (e as CustomEvent).detail ?? {};
       if (!accessToken || !refreshToken) {
@@ -69,15 +82,6 @@ export default function LoginPage() {
       navigate('/', { replace: true });
     };
     hostEl.addEventListener('auth-success', handler);
-    return () => hostEl.removeEventListener('auth-success', handler);
-  }, [navigate]);
-
-  // Step 2a: build the shadow DOM, inject first-paint HTML+CSS, load
-  // the bundle, hand off to its mount function. Tear down on unmount
-  // (route change, retry after error, etc.).
-  useEffect(() => {
-    if (!embed || !hostRef.current) return;
-    const hostEl = hostRef.current;
 
     // attachShadow can only be called ONCE per host element — calling
     // it twice throws NotSupportedError. React StrictMode runs effects
@@ -145,6 +149,7 @@ export default function LoginPage() {
     shadow.appendChild(script);
 
     return () => {
+      hostEl.removeEventListener('auth-success', handler);
       unmountRef.current?.();
       unmountRef.current = null;
       // Clear shadow contents for StrictMode's re-mount. attachShadow
@@ -153,7 +158,8 @@ export default function LoginPage() {
       // call re-injects CSS via .use() and re-renders the React tree.
       shadow.innerHTML = '';
     };
-  }, [embed]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embed, navigate]);
 
   if (loadError) {
     return (
