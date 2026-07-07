@@ -47,10 +47,15 @@ export class AuthService {
     // 创建用户
     const hashedPassword = await hashPassword(registerDto.password);
     const id = require('crypto').randomUUID();
+    // User.email 在 schema 里是 NOT NULL @unique，但前端 RegisterForm
+    // 不收集 email（只用手机号）。合成 `<phone>@phone.local` 满足
+    // NOT NULL + @unique（phonenumber 已 unique，所以 email 也 unique）。
+    // 后续如果前端支持邮箱登录，去掉这行并在 DTO 加 email 字段。
+    const synthesizedEmail = `${registerDto.phonenumber}@phone.local`;
     const result = await this.db.query(
-      `INSERT INTO "User" (id, phonenumber, password, name, "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, NOW(), NOW()) RETURNING *`,
-      [id, registerDto.phonenumber, hashedPassword, registerDto.name],
+      `INSERT INTO "User" (id, email, phonenumber, password, name, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`,
+      [id, synthesizedEmail, registerDto.phonenumber, hashedPassword, registerDto.name],
     );
 
     return this.generateTokens(result.rows[0]);

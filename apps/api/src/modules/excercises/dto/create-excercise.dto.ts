@@ -1,4 +1,4 @@
-import { IsString, MinLength, isNumber } from 'class-validator';
+import { IsString, MinLength, IsNumber } from 'class-validator';
 
 export class CreateExcerciseDto {
   @IsString()
@@ -8,10 +8,10 @@ export class CreateExcerciseDto {
   @IsString()
   description: string;
 
-  @isNumber()
+  @IsNumber()
   difficulty: number;
 
-  @isNumber()
+  @IsNumber()
   category: number;
   // category          Int                 @default(1) // 动作所属类别：1=基础、2=力量、3=有氧、4=柔韧、5=平衡、6=爆发力
   // difficulty        Int                 @default(1) // 难度等级：1=初学者、2=中级、3=高级、4=专业级
