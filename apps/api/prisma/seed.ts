@@ -66,19 +66,17 @@ async function main() {
     { offset: -2, hour: 10, minute: 0, name: '腿部训练日', duration: 65, count: 6, intensity: 50, kcal: 360 },
   ];
 
-  for (const s of sessions) {
-    await prisma.trainingSession.create({
-      data: {
-        userId: user.id,
-        name: s.name,
-        startedAt: dayOffset(weekStart, s.offset, s.hour, s.minute),
-        durationMinutes: s.duration,
-        exerciseCount: s.count,
-        intensity: s.intensity,
-        caloriesBurned: s.kcal,
-      },
-    });
-  }
+  await prisma.trainingSession.createMany({
+    data: sessions.map((s) => ({
+      userId: user.id,
+      name: s.name,
+      startedAt: dayOffset(weekStart, s.offset, s.hour, s.minute),
+      durationMinutes: s.duration,
+      exerciseCount: s.count,
+      intensity: s.intensity,
+      caloriesBurned: s.kcal,
+    })),
+  });
 
   const count = await prisma.trainingSession.count({ where: { userId: user.id } });
   console.log(`[seed] user ${DEMO_PHONE} has ${count} TrainingSessions`);
