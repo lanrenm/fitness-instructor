@@ -19,7 +19,8 @@ model User {
   name        String? // 用户昵称或真实姓名
   createdAt   DateTime  @default(now()) // 账户创建时间
   updatedAt   DateTime  @updatedAt // 账户信息最后更新时间
-  workouts    Workout[] // 关联关系：当前用户创建的所有训练计划
+  workouts         Workout[] // 关联关系：当前用户创建的所有训练计划
+  trainingSessions TrainingSession[] // 关联关系：当前用户的训练打卡记录
 }
 
 // 动作表
@@ -116,3 +117,21 @@ model WorkoutExcercises {
 // 2 = 中级 - 有一定运动基础，掌握基本动作要领
 // 3 = 高级 - 长期规律训练，能够完成复杂动作
 // 4 = 专业级 - 运动员级别，需要专业指导和监督
+
+// 训练打卡会话（用户实际完成的一次训练）
+model TrainingSession {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String // 训练名称，如"胸部+三头训练"
+  startedAt       DateTime // 实际开始时间
+  durationMinutes Int // 训练时长（分钟）
+  exerciseCount   Int // 动作数量
+  intensity       Int // 0-100 完成度
+  caloriesBurned  Int // 消耗热量（kcal）
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startedAt])
+}
