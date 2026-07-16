@@ -105,19 +105,30 @@ export default defineConfig(({ mode }) => {
           // matter; the later writeLoadShareModule / writePreBuildLibPath
           // call (per-key) replaces the earlier one (per-subpath).
           //
-          // lucide-react / @fitness/ui-components don't need import:false
-          // because the host code never imports them directly — only
-          // AuthPage does, and the remote's fallback populates the
-          // share scope for them. (Apps/web source: `grep -r
-          // "from ['\"]lucide-react\|from ['\"]@fitness" apps/web/src`
-          // returns no matches.)
-          react: { singleton: true, requiredVersion: '^19.0.0', eager: true, import: 'react' },
+          // @fitness/ui-components / lucide-react need `import: '<pkg>'`
+          // (string) so the Vite plugin generates a host-side seed that
+          // loads the HOST's own local copy into __mfModuleCache.share[]
+          // BEFORE initHost()'s loadShare() loop runs. Without it, the
+          // host's `import { IntensityChart } from '@fitness/ui-components'`
+          // gets rewritten by the plugin to `await __mfLoadShare('@fitness/ui-components')`,
+          // the share scope is empty (no remote has registered it yet),
+          // loadShare returns an empty module namespace, and the destructure
+          // throws `SyntaxError: does not provide an export named 'IntensityChart'`
+          // — blocking the entire React tree from mounting (root stays
+          // empty, no DOM, dashboard cards/chart never render).
+          //
+          // The previous comment ("host code never imports them directly")
+          // was true at one point but is now stale — Dashboard.tsx,
+          // TopBar.tsx, LeftBar.tsx all import from @fitness/ui-components,
+          // and Dashboard.tsx + modules.ts + TopBar.tsx all import from
+          // lucide-react. Apply the same seed pattern as react.
           'react/jsx-dev-runtime': { singleton: true, requiredVersion: '^19.0.0', eager: true, import: 'react/jsx-dev-runtime' },
           'react/jsx-runtime': { singleton: true, requiredVersion: '^19.0.0', eager: true, import: 'react/jsx-runtime' },
           'react-dom': { singleton: true, requiredVersion: '^19.0.0', eager: true, import: 'react-dom' },
           'react-dom/client': { singleton: true, requiredVersion: '^19.0.0', eager: true, import: 'react-dom/client' },
-          'lucide-react': { singleton: true },
-          '@fitness/ui-components': { singleton: true },
+          react: { singleton: true, requiredVersion: '^19.0.0', eager: true, import: 'react' },
+          'lucide-react': { singleton: true, eager: true, import: 'lucide-react' },
+          '@fitness/ui-components': { singleton: true, eager: true, import: '@fitness/ui-components' },
         },
         // The dynamic-remote-type-hints runtime plugin (enabled by default
         // in dev) opens a WebSocket to ws://127.0.0.1:16322/ expecting an

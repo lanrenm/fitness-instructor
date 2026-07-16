@@ -47,6 +47,14 @@ RUN if [ -d /app/node_modules/@fitness/ui-components ]; then \
       fi; \
     fi
 
+# 4) Mirror apps/bff/Dockerfile's node_modules backup pattern. docker-compose
+#    mounts the named volume `web-node-modules` on top of /app/node_modules,
+#    hiding the image's installed deps and breaking `vite` lookups (npm script
+#    can't find `vite: not found` → container restart loop). Back up the
+#    image's resolved node_modules and restore it on container start.
+RUN mkdir -p /app-original-modules && \
+    cp -a ./node_modules /app-original-modules/
+
 EXPOSE 5173
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["sh", "-c", "cp -rn /app-original-modules/node_modules/* /app/node_modules/ 2>/dev/null || true; exec npm run dev -- --host 0.0.0.0"]
