@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* apps/web 用 Tailwind v4 vite plugin，默认自动扫 ./src/**，但不会跨包扫
+   packages/ui-components。v4 oxide scanner 的 file-based @source 路径形式
+   现阶段跟 Vite dev 的 server.fs.allow / scanner 的 root 解析不兼容
+   （manifest 进 cache 后增量源就收不到），所以这里用 @source inline 形式
+   把已知会用到、且仅在 ui-components 里出现的工具类列出来，绕开 fs 路径
+   解析。后续若 @source "<abs path>" 修好可改回路径形式。 */
+@source inline("{grid,flex,h-12,w-12,place-items-center,rounded-full,grid-cols-1,sm:grid-cols-2,lg:grid-cols-4,bg-green-50,text-green-600,bg-red-50,text-red-500,right-4,top-4,px-2,py-0.5,leading-tight,min-w-0,shrink-0,text-right,rounded-2xl,gap-3,truncate,text-sm,text-xs,text-base,font-semibold,font-bold,flex-col,text-2xl,gap-4,gap-6}");
+
 :root {
   --color-primary: #FF6B35;
   --color-background: #FFFFFF;

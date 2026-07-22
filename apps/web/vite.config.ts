@@ -1,4 +1,5 @@
 import { defineConfig, loadEnv } from 'vite';
+import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { federation } from '@module-federation/vite';
@@ -149,6 +150,20 @@ export default defineConfig(({ mode }) => {
       }),
     ],
     server: {
+      // Vite 默认只允许访问项目根（apps/web）下的文件，否则报 404。Tailwind v4
+      // oxide scanner 通过 @source "..." 读取跨包源码时也会走 fs，把
+      // monorepo 根（packages/、apps/ 同级）加入 allow list。
+      fs: {
+        allow: [
+          // apps/web 自身
+          path.resolve(__dirname),
+          // 兄弟 apps（apps/web vite 在 container 内会通过 /app 访问，但
+          // 路径解析仍依赖工作目录）
+          // monorepo 根：让 Tailwind 能扫 packages/ui-components/src/
+          path.resolve(__dirname, '..', '..'),
+          path.resolve(__dirname, '..', '..', 'packages'),
+        ],
+      },
       proxy: {
         '/api': {
           target: 'http://host.docker.internal:3000',

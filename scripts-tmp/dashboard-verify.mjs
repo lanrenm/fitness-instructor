@@ -114,7 +114,8 @@ const cards = await evalExpr(`
       if (!el) return { title: t, found: false };
       const card = el.closest('div.relative');
       const value = card?.querySelector('.text-2xl')?.textContent?.trim() ?? null;
-      return { title: t, found: true, value };
+      const unit = card?.querySelector('.text-base')?.textContent?.trim() ?? '';
+      return { title: t, found: true, value: value ? [value, unit].filter(Boolean).join(' ') : null };
     });
   })()
 `);

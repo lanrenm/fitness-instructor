@@ -3,7 +3,7 @@
  * 数据来自 3 个 GET（stats / intensity / recent-sessions），
  * 公共组件抽到 @fitness/ui-components。
  */
-import { Calendar, Flame, Target, TrendingUp } from 'lucide-react'
+import { Calendar, Flame, Medal, TrendingUp } from 'lucide-react'
 import {
   IntensityChart,
   SectionCard,
@@ -36,27 +36,35 @@ export default function OverviewDashboard() {
         items={[
           {
             icon: Calendar,
-            value: s ? `${s.thisWeek.count} 次` : '—',
+            value: s ? s.thisWeek.count : '—',
+            unit: s ? '次' : undefined,
             label: '本周训练',
             delta: thisWeekDelta('count'),
+            iconColor: { bg: '#FFE8E1', fg: '#FF6B35' },
           },
           {
             icon: TrendingUp,
-            value: s ? `${s.thisWeek.durationMinutes} 分钟` : '—',
+            value: s ? s.thisWeek.durationMinutes : '—',
+            unit: s ? '分钟' : undefined,
             label: '训练时长',
             delta: thisWeekDelta('durationMinutes'),
+            iconColor: { bg: '#E5F0FF', fg: '#3B91F5' },
           },
           {
             icon: Flame,
-            value: s ? `${s.thisWeek.caloriesBurned.toLocaleString()} kcal` : '—',
+            value: s ? s.thisWeek.caloriesBurned.toLocaleString() : '—',
+            unit: s ? 'kcal' : undefined,
             label: '消耗热量',
             delta: thisWeekDelta('caloriesBurned'),
+            iconColor: { bg: '#FFE7EC', fg: '#FF5A67' },
           },
           {
-            icon: Target,
-            value: s ? `${s.total.count} 个` : '—',
+            icon: Medal,
+            value: s ? s.total.count : '—',
+            unit: s ? '个' : undefined,
             label: '达成目标',
             delta: s ? s.thisWeek.count : undefined,
+            iconColor: { bg: '#E3F4EC', fg: '#35B87A' },
           },
         ]}
       />
