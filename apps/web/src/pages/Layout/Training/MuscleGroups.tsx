@@ -3,13 +3,13 @@
  */
 import { useMemo, useState } from 'react'
 import { BarChart3, Layers, Link as LinkIcon, Plus } from 'lucide-react'
+import { StatsCardGroup } from '@fitness/ui-components'
 import {
-  StatsCardGroup,
   MuscleGroupCard,
   MuscleGroupDetailDialog,
   MuscleGroupFormDialog,
   accentFor,
-} from '@fitness/ui-components'
+} from '../../../components/muscle-groups'
 import { useMuscleGroups } from '../../../hooks/useMuscleGroups'
 import { useMuscleGroupMutations } from '../../../hooks/useMuscleGroupMutations'
 import type { IMuscleGroupNode } from '../../../hooks/useMuscleGroups'
