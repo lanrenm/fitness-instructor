@@ -6,7 +6,7 @@
    （manifest 进 cache 后增量源就收不到），所以这里用 @source inline 形式
    把已知会用到、且仅在 ui-components 里出现的工具类列出来，绕开 fs 路径
    解析。后续若 @source "<abs path>" 修好可改回路径形式。 */
-@source inline("{grid,flex,h-12,w-12,place-items-center,rounded-full,grid-cols-1,sm:grid-cols-2,lg:grid-cols-4,bg-green-50,text-green-600,bg-red-50,text-red-500,right-4,top-4,px-2,py-0.5,leading-tight,min-w-0,shrink-0,text-right,rounded-2xl,gap-3,truncate,text-sm,text-xs,text-base,font-semibold,font-bold,flex-col,text-2xl,gap-4,gap-6}");
+@source inline("{grid,flex,h-12,w-12,place-items-center,rounded-full,grid-cols-1,sm:grid-cols-2,lg:grid-cols-4,bg-green-50,text-green-600,bg-red-50,text-red-500,right-4,top-4,px-2,py-0.5,leading-tight,min-w-0,shrink-0,text-right,rounded-2xl,gap-3,truncate,text-sm,text-xs,text-base,font-semibold,font-bold,flex-col,text-2xl,gap-4,gap-6,divide-y,divide-[#EDF2F7],border-[#EDF2F7],border-[#E2E8F0],bg-[#FFF5F5],bg-[#F7FAFC],text-[#E53E3E],text-[#C53030],text-[#A0AEC0],text-[#4A5568],accent-[#FF6B35],focus:border-[#FF6B35],resize-none,shadow-[0_8px_24px_rgba(15,23,42,0.08)],shadow-[0_24px_48px_rgba(15,23,42,0.18)],shadow-[0_2px_8px_rgba(255,107,53,0.25)],hover:-translate-y-0.5,hover:bg-[#FFF5F5],hover:bg-[#EDF2F7],hover:bg-[#E55A2B],disabled:opacity-50,border-b,border-t,rounded-md,bg-[#FED7D7],rounded-xl,rounded-lg,h-4,w-4,h-8,w-8,h-11,w-11,h-40,sm:grid-cols-3,lg:grid-cols-3,p-4,p-5,px-2.5,py-1,px-3,py-2,text-lg,hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)],outline-none,items-center,justify-between,justify-end,gap-1,gap-2,gap-3,gap-4,bg-black/40,z-50,fixed,inset-0,text-left,flex,flex-col,flex-wrap,items-start,border,border-[#FED7D7],transition,group,shrink-0}");
 
 :root {
   --color-primary: #FF6B35;
