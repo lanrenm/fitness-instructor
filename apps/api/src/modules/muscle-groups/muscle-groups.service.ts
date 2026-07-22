@@ -39,26 +39,29 @@ export class MuscleGroupsService {
   }
 
   async create(dto: CreateMuscleGroupDto) {
-    if (dto.parentId) {
-      await this.assertExists(dto.parentId);
+    const parentId = dto.parentId ? dto.parentId : null;
+    if (parentId) {
+      await this.assertExists(parentId);
     }
     const r = await this.db.query(
       `INSERT INTO "MuscleGroup" (id, name, description, "parentId", "isActive", "createdAt", "updatedAt")
        VALUES (gen_random_uuid()::text, $1, $2, $3, COALESCE($4, true), NOW(), NOW())
        RETURNING id, name, description, "parentId", "isActive", "createdAt", "updatedAt"`,
-      [dto.name, dto.description ?? null, dto.parentId ?? null, dto.isActive ?? null],
+      [dto.name, dto.description ?? null, parentId, dto.isActive ?? null],
     );
     return this.findOne(r.rows[0].id);
   }
 
   async update(id: string, dto: UpdateMuscleGroupDto) {
     await this.assertExists(id);
+    let newParent: string | null | undefined;
     if (dto.parentId !== undefined) {
-      if (dto.parentId === id) {
+      newParent = dto.parentId ? dto.parentId : null;
+      if (newParent === id) {
         throw new BadRequestException('不能把自己设为父级');
       }
-      if (dto.parentId) {
-        await this.assertExists(dto.parentId);
+      if (newParent) {
+        await this.assertExists(newParent);
         const cycle = await this.db.query(
           `WITH RECURSIVE descendants AS (
              SELECT id FROM "MuscleGroup" WHERE "parentId" = $1
@@ -66,7 +69,7 @@ export class MuscleGroupsService {
              SELECT mg.id FROM "MuscleGroup" mg JOIN descendants d ON mg."parentId" = d.id
            )
            SELECT EXISTS(SELECT 1 FROM descendants WHERE id = $2) AS would_cycle`,
-          [id, dto.parentId],
+          [id, newParent],
         );
         if (cycle.rows[0].would_cycle) {
           throw new BadRequestException('不能把肌肉群移到其后代下');
@@ -86,8 +89,8 @@ export class MuscleGroupsService {
         dto.name ?? null,
         dto.description !== undefined,
         dto.description ?? null,
-        dto.parentId !== undefined,
-        dto.parentId ?? null,
+        newParent !== undefined,
+        newParent ?? null,
         dto.isActive ?? null,
       ],
     );
