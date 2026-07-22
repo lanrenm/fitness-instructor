@@ -16,44 +16,47 @@ function forwardHeaders(request: Request): Headers {
   return out;
 }
 
-export async function GET(request: Request) {
+async function forward(request: Request, method: string) {
   const url = new URL(request.url);
   const path = url.pathname.replace('/api', '');
 
   try {
-    const response = await fetch(API_BASE + path, {
-      headers: forwardHeaders(request),
-    });
-    const data = await response.json();
-    return Response.json(data, { status: response.status });
-  } catch (error) {
-    return Response.json(
-      { error: 'Failed to connect to API', details: String(error) },
-      { status: 502 },
-    );
-  }
-}
-
-export async function POST(request: Request) {
-  const url = new URL(request.url);
-  const path = url.pathname.replace('/api', '');
-
-  try {
-    const body = await request.text();
+    const body = method === 'GET' || method === 'HEAD' ? undefined : await request.text();
     const headers = forwardHeaders(request);
-    headers.set('Content-Type', 'application/json');
-    const response = await fetch(API_BASE + path, {
-      method: 'POST',
+    if (body !== undefined) headers.set('Content-Type', 'application/json');
+    const response = await fetch(API_BASE + path + url.search, {
+      method,
       headers,
       body,
     });
-
     const data = await response.json();
-    return Response.json(data, { status: response.status });
+    return new Response(JSON.stringify(data), {
+      status: response.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
-    return Response.json(
-      { error: 'Failed to connect to API', details: String(error) },
-      { status: 502 },
-    );
+    return new Response(JSON.stringify({
+      error: 'Failed to connect to API',
+      details: String(error),
+    }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
+}
+
+export async function GET(request: Request) {
+  return forward(request, 'GET');
+}
+
+export async function POST(request: Request) {
+  return forward(request, 'POST');
+}
+
+export async function PATCH(request: Request) {
+  return forward(request, 'PATCH');
+}
+
+export async function DELETE(request: Request) {
+  return forward(request, 'DELETE');
 }
