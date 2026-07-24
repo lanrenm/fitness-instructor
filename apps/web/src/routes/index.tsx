@@ -4,6 +4,7 @@
  */
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import AuthSessionBridge from '../auth/AuthSessionBridge';
 import LoginPage from '../pages/Login';
 import AppLayout from '../components/layout/AppLayout';
 import OverviewDashboard from '../pages/Layout/Overview/Dashboard';
@@ -45,66 +46,74 @@ function ModuleIndex({ to }: { to: string }) {
 }
 
 export const router = createBrowserRouter([
-  // 公开：登录页（不带 AppLayout）
+  // 根级：AuthSessionBridge 订阅 onForceLogout，自身渲染 <Outlet/>
+  // 包裹下面所有路由（公开 + 受保护）。这样无论在哪个页面 token 过期，
+  // bridge 都会清 query cache 并 navigate('/login')。
   {
-    path: '/login',
-    element: (
-      <PublicRoute>
-        <LoginPage />
-      </PublicRoute>
-    ),
-  },
-
-  // 受保护：套 AppLayout 壳层，内部按模块嵌套子路由
-  {
-    path: '/',
-    element: (
-      <ProtectedRoute>
-        <AppLayout />
-      </ProtectedRoute>
-    ),
+    element: <AuthSessionBridge />,
     children: [
-      // 根路径 → 概览/仪表盘（登录后默认落点）
-      { index: true, element: <Navigate to="/overview/dashboard" replace /> },
-
-      // 概览
+      // 公开：登录页（不带 AppLayout）
       {
-        path: 'overview',
-        children: [
-          { index: true, element: <ModuleIndex to="/overview/dashboard" /> },
-          { path: 'dashboard', element: <OverviewDashboard /> },
-          { path: 'calendar', element: <OverviewCalendar /> },
-          { path: 'achievements', element: <OverviewAchievements /> },
-        ],
+        path: '/login',
+        element: (
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        ),
       },
 
-      // 训练管理
+      // 受保护：套 AppLayout 壳层，内部按模块嵌套子路由
       {
-        path: 'training',
+        path: '/',
+        element: (
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        ),
         children: [
-          { index: true, element: <ModuleIndex to="/training/exercises" /> },
-          { path: 'exercises', element: <TrainingExercises /> },
-          { path: 'muscle-groups', element: <TrainingMuscleGroups /> },
-        ],
-      },
+          // 根路径 → 概览/仪表盘（登录后默认落点）
+          { index: true, element: <Navigate to="/overview/dashboard" replace /> },
 
-      // AI 顾问
-      {
-        path: 'ai',
-        children: [
-          { index: true, element: <ModuleIndex to="/ai/chat" /> },
-          { path: 'chat', element: <AIChat /> },
-          { path: 'plan', element: <AIPlan /> },
-        ],
-      },
+          // 概览
+          {
+            path: 'overview',
+            children: [
+              { index: true, element: <ModuleIndex to="/overview/dashboard" /> },
+              { path: 'dashboard', element: <OverviewDashboard /> },
+              { path: 'calendar', element: <OverviewCalendar /> },
+              { path: 'achievements', element: <OverviewAchievements /> },
+            ],
+          },
 
-      // 数据分析
-      {
-        path: 'data',
-        children: [
-          { index: true, element: <ModuleIndex to="/data/overview" /> },
-          { path: 'overview', element: <DataOverview /> },
-          { path: 'exercises', element: <DataExercises /> },
+          // 训练管理
+          {
+            path: 'training',
+            children: [
+              { index: true, element: <ModuleIndex to="/training/exercises" /> },
+              { path: 'exercises', element: <TrainingExercises /> },
+              { path: 'muscle-groups', element: <TrainingMuscleGroups /> },
+            ],
+          },
+
+          // AI 顾问
+          {
+            path: 'ai',
+            children: [
+              { index: true, element: <ModuleIndex to="/ai/chat" /> },
+              { path: 'chat', element: <AIChat /> },
+              { path: 'plan', element: <AIPlan /> },
+            ],
+          },
+
+          // 数据分析
+          {
+            path: 'data',
+            children: [
+              { index: true, element: <ModuleIndex to="/data/overview" /> },
+              { path: 'overview', element: <DataOverview /> },
+              { path: 'exercises', element: <DataExercises /> },
+            ],
+          },
         ],
       },
     ],

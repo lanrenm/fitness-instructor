@@ -22,10 +22,43 @@
 }
 
 .rightGroup {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 14px;
   flex-shrink: 0;
+}
+
+/* ---------- 用户菜单触发器 ---------- */
+.rightTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.rightTrigger:focus-visible {
+  outline: 2px solid #ff6b35;
+  outline-offset: 4px;
+  border-radius: 16px;
+}
+
+/* ---------- 用户下拉菜单 ---------- */
+.userMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  padding: 8px;
+  z-index: 40;
 }
 
 /* ---------- Logo ---------- */

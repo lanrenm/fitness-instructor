@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
+import { useAuthSession } from '../../auth/AuthSessionBridge';
 
 interface EmbedResponse {
   html: string;
@@ -29,6 +30,11 @@ export default function LoginPage() {
   const hostRef = useRef<HTMLDivElement>(null);
   const unmountRef = useRef<(() => void) | null>(null);
   const navigate = useNavigate();
+  const { lastReason } = useAuthSession();
+
+  // 暴露给 banner：refresh-failed / expired-token 时显示「上次会话已过期」
+  const showExpiredBanner =
+    lastReason === 'refresh-failed' || lastReason === 'expired-token';
 
   const loadEmbed = async () => {
     setLoadError(null);
@@ -164,6 +170,7 @@ export default function LoginPage() {
   if (loadError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-6">
+        {showExpiredBanner && <ExpiredBanner />}
         <p className="text-red-500 text-center">
           认证模块加载失败：{loadError}
         </p>
@@ -179,12 +186,34 @@ export default function LoginPage() {
 
   if (!embed) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-6">
+        {showExpiredBanner && <ExpiredBanner />}
         <p className="text-gray-500">加载中...</p>
       </div>
     );
   }
 
   // The host element. Everything inside lives in the shadow root.
-  return <div ref={hostRef} data-auth-embed-host="" />;
+  return (
+    <div className="flex flex-col">
+      {showExpiredBanner && <ExpiredBanner />}
+      <div ref={hostRef} data-auth-embed-host="" />
+    </div>
+  );
+}
+
+/**
+ * @description 「上次会话已过期，请重新登录」横幅。
+ * 仅当 forceLogout 原因是 refresh-failed / expired-token 时显示。
+ */
+function ExpiredBanner() {
+  return (
+    <div
+      role="alert"
+      data-auth-expired-banner=""
+      className="bg-[#FFF5F5] border-b border-[#FED7D7] px-6 py-3 text-center text-sm text-[#C53030]"
+    >
+      上次会话已过期，请重新登录
+    </div>
+  );
 }
