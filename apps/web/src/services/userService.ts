@@ -2,6 +2,9 @@
  * @description 用户信息服务 - 当前用户信息拉取
  */
 
+import { tryAuthedFetch, isUnauthorized } from './http';
+import { AuthExpiredError } from './http';
+
 /**
  * @description 后端 GET /auth/me 响应字段
  */
@@ -28,8 +31,6 @@ export interface ICurrentUser {
   updatedAt: string;
 }
 
-const BFF_BASE = import.meta.env.VITE_BFF_URL || 'http://localhost:3000';
-
 /**
  * @description 用户信息服务
  */
@@ -37,22 +38,21 @@ export const userService = {
   /**
    * @description 获取当前登录用户信息（依赖已写入 accessToken）
    * @returns 当前用户信息
-   * @throws 401 时 token 失效，调用方应清理 token 并跳 /login
+   * @throws AuthExpiredError refresh 仍失败时（已被 tryAuthedFetch 转为强制登出）
    */
   async fetchCurrentUser(): Promise<ICurrentUser> {
-    const accessToken =
-      localStorage.getItem('accessToken') ?? null;
-
-    const res = await fetch(`${BFF_BASE}/api/auth/me`, {
-      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-    });
-    if (!res.ok) {
-      if (res.status === 401) {
-        throw new Error('UNAUTHORIZED');
+    try {
+      const res = await tryAuthedFetch('/api/auth/me');
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.message || '获取用户信息失败');
       }
-      const error = await res.json().catch(() => ({}));
-      throw new Error(error.message || '获取用户信息失败');
+      return res.json();
+    } catch (err) {
+      if (isUnauthorized(err)) throw err;
+      // tryAuthedFetch 在 refresh 失败时已强制登出 + 抛 AuthExpiredError；
+      // 这里如果拿到的是普通 Error（首请求非 401，或其他 fetch 错），保持原行为。
+      throw err;
     }
-    return res.json();
   },
 };
