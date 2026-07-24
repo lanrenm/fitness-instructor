@@ -81,7 +81,7 @@ export class AuthService {
 
   async getUser(userId: string) {
     const result = await this.db.query(
-      'SELECT id, phonenumber, name, "createdAt", "updatedAt" FROM "User" WHERE id = $1',
+      'SELECT id, email, phonenumber, name, "createdAt", "updatedAt" FROM "User" WHERE id = $1',
       [userId],
     );
     if (result.rows.length === 0) {
@@ -91,7 +91,7 @@ export class AuthService {
   }
 
   private generateTokens(user: any) {
-    const payload = { sub: user.id, phonenumber: user.phonenumber };
+    const payload = { sub: user.id, phonenumber: user.phonenumber, email: user.email };
     return {
       accessToken: this.jwtService.sign(payload, { expiresIn: '15m' }),
       refreshToken: this.jwtService.sign(payload, { expiresIn: '7d' }),
