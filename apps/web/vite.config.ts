@@ -130,7 +130,9 @@ export default defineConfig(({ mode }) => {
           react: { singleton: true, requiredVersion: '^19.0.0', eager: true, import: 'react' },
           'lucide-react': { singleton: true, eager: true, import: 'lucide-react' },
           '@fitness/ui-components': { singleton: true, eager: true, import: '@fitness/ui-components' },
-        },
+          // `eager` 是 MF runtime 的合法共享选项(见上方注释,host 端必需),
+          // 但 @module-federation/vite 的 shared 选项类型未声明该字段,故此处断言。
+        } as Record<string, { singleton?: boolean; requiredVersion?: string; import?: string; eager?: boolean }>,
         // The dynamic-remote-type-hints runtime plugin (enabled by default
         // in dev) opens a WebSocket to ws://127.0.0.1:16322/ expecting an
         // Rspack dev server there. BFF runs `rspack build --watch` (not

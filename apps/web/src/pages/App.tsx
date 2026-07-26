@@ -12,15 +12,6 @@ async function fetchProjects() {
   return res.json()
 }
 
-async function login(username: string, password: string) {
-  const res = await fetch('/bff/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  })
-  return res.json()
-}
-
 export default function App() {
   const [users, setUsers] = useState<any[]>([])
   const [projects, setProjects] = useState<any[]>([])

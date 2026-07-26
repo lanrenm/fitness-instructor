@@ -3,7 +3,6 @@
  */
 
 import { tryAuthedFetch, isUnauthorized } from './http';
-import { AuthExpiredError } from './http';
 
 /**
  * @description 后端 GET /auth/me 响应字段
