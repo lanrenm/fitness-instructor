@@ -7,9 +7,10 @@ import { UsersService } from './modules/users/users.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { OverviewModule } from './modules/overview/overview.module';
 import { MuscleGroupsModule } from './modules/muscle-groups/muscle-groups.module';
+import { ExcercisesModule } from './modules/excercises/excercises.module';
 
 @Module({
-  imports: [AuthModule, OverviewModule, MuscleGroupsModule],
+  imports: [AuthModule, OverviewModule, MuscleGroupsModule, ExcercisesModule],
   controllers: [AppController, UsersController],
   providers: [AppService, DatabaseService, UsersService],
 })
