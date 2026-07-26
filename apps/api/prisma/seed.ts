@@ -78,6 +78,87 @@ async function main() {
     })),
   });
 
+  // 4. 幂等 upsert 一级肌群（设计稿 4 个动作所需）
+  const muscleGroups = [
+    { name: '胸大肌', description: '胸部主要肌群' },
+    { name: '背阔肌', description: '背部主要肌群' },
+    { name: '股四头肌', description: '大腿前侧肌群' },
+    { name: '臀大肌', description: '臀部主要肌群' },
+    { name: '三角肌', description: '肩部肌群' },
+    { name: '肱二头肌', description: '上臂前侧肌群' },
+    { name: '腹直肌', description: '腹部核心肌群' },
+    { name: '竖脊肌', description: '背部深层肌群，维持脊柱稳定' },
+    { name: '腘绳肌', description: '大腿后侧肌群' },
+  ];
+  const muscleGroupByName = new Map<string, string>();
+  for (const mg of muscleGroups) {
+    const row = await prisma.muscleGroup.upsert({
+      where: { id: `seed-muscle-${mg.name}` },
+      update: { description: mg.description, isActive: true },
+      create: {
+        id: `seed-muscle-${mg.name}`,
+        name: mg.name,
+        description: mg.description,
+        isActive: true,
+      },
+    });
+    muscleGroupByName.set(mg.name, row.id);
+  }
+
+  // 5. 幂等 upsert 设计稿 4 个动作
+  const exercises = [
+    { name: '杠铃深蹲', category: 3, difficulty: 2, equipment: ['杠铃'],
+      muscles: ['股四头肌', '臀大肌'] },
+    { name: '卧推',     category: 1, difficulty: 2, equipment: ['杠铃'],
+      muscles: ['胸大肌', '三角肌'] },
+    { name: '硬拉',     category: 2, difficulty: 3, equipment: ['杠铃'],
+      muscles: ['竖脊肌', '臀大肌', '腘绳肌'] },
+    { name: '引体向上', category: 2, difficulty: 2, equipment: ['单杠'],
+      muscles: ['背阔肌', '肱二头肌'] },
+  ];
+  for (const ex of exercises) {
+    const existing = await prisma.excercises.findFirst({ where: { name: ex.name } });
+    let exerciseId: string;
+    if (existing) {
+      exerciseId = existing.id;
+      await prisma.excercises.update({
+        where: { id: existing.id },
+        data: {
+          category: ex.category,
+          difficulty: ex.difficulty,
+          equipment: ex.equipment,
+        },
+      });
+      await prisma.excerciseMuscle.deleteMany({ where: { excerciseId: existing.id } });
+    } else {
+      const created = await prisma.excercises.create({
+        data: {
+          name: ex.name,
+          category: ex.category,
+          difficulty: ex.difficulty,
+          equipment: ex.equipment,
+        },
+      });
+      exerciseId = created.id;
+    }
+    for (const muscleName of ex.muscles) {
+      const mgId = muscleGroupByName.get(muscleName);
+      if (!mgId) continue;
+      await prisma.excerciseMuscle.create({
+        data: {
+          excerciseId: exerciseId,
+          muscleGroupId: mgId,
+          weight: 0,
+          isPrimary: false,
+        },
+      });
+    }
+  }
+
+  const muscleCount = await prisma.muscleGroup.count();
+  const exerciseCount = await prisma.excercises.count();
+  console.log(`[seed] muscleGroups=${muscleCount}, exercises=${exerciseCount}`);
+
   const count = await prisma.trainingSession.count({ where: { userId: user.id } });
   console.log(`[seed] user ${DEMO_PHONE} has ${count} TrainingSessions`);
 }
