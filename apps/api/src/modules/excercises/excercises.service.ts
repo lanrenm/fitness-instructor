@@ -59,7 +59,7 @@ export class ExcercisesService {
       await client.query('BEGIN');
       const ins = await client.query(
         `INSERT INTO "Excercises" (id, name, description, category, difficulty, equipment, "isActive", "createdAt", "updatedAt")
-         VALUES (gen_random_uuid()::text, $1, $2, $3, $4, COALESCE($5, '{}'), COALESCE($6, true), NOW(), NOW())
+         VALUES (gen_random_uuid()::text, $1, $2, $3, $4, COALESCE($5::text[], '{}'), COALESCE($6::boolean, true), NOW(), NOW())
          RETURNING id`,
         [
           dto.name,
