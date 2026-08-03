@@ -1,3 +1,4 @@
+import type { IAiCitation, TAiMessageRole } from '@fitness/shared-types/ai';
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database';
 
@@ -7,19 +8,19 @@ export interface IAiMessageRow {
   role: string;
   content: string;
   reasoning: string | null;
-  ragContext: any;
+  ragContext: IAiCitation[] | null;
   providerId: string | null;
   promptTokens: number;
   completionTokens: number;
   compressed: boolean;
-  createdAt: string;
+  createdAt: Date;
 }
 
 export interface IAiMessageInsertInput {
-  role: 'user' | 'assistant' | 'system';
+  role: TAiMessageRole;
   content: string;
   reasoning?: string | null;
-  ragContext?: any;
+  ragContext?: IAiCitation[];
   providerId?: string | null;
   promptTokens?: number;
   completionTokens?: number;
@@ -62,7 +63,8 @@ export class AiMessageRepository {
     if (sinceId) {
       const { rows } = await this.db.getPool().query(
         `SELECT * FROM "AiMessage"
-         WHERE "conversationId" = $1 AND id > $2
+         WHERE "conversationId" = $1
+           AND "createdAt" > (SELECT "createdAt" FROM "AiMessage" WHERE id = $2)
          ORDER BY "createdAt" ASC`,
         [conversationId, sinceId],
       );

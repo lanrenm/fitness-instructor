@@ -15,7 +15,7 @@ describe('AiMessageRepository', () => {
       role: 'user',
       content: 'hi',
       reasoning: null,
-      ragContext: null,
+      ragContext: [],
       providerId: 'MiniMax-M3',
       promptTokens: 0,
       completionTokens: 0,
@@ -38,6 +38,17 @@ describe('AiMessageRepository', () => {
     pool.query.mockResolvedValueOnce({ rows: [] });
     await repo.getForConversation('c1');
     expect(pool.query.mock.calls[0][0]).toMatch(/SELECT \* FROM "AiMessage"/);
+  });
+
+  it('getForConversation uses the cursor message createdAt for sinceId', async () => {
+    const { repo, pool } = setup();
+    pool.query.mockResolvedValueOnce({ rows: [] });
+    await repo.getForConversation('c1', 'm1');
+    const [sql, args] = pool.query.mock.calls[0];
+    expect(sql).toMatch(
+      /"createdAt" > \(SELECT "createdAt" FROM "AiMessage" WHERE id = \$2\)/,
+    );
+    expect(args).toEqual(['c1', 'm1']);
   });
 
   it('markCompressed bulk-updates compressed=true', async () => {

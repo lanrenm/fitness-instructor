@@ -8,8 +8,8 @@ export interface IAiConversationRow {
   summary: string | null;
   model: string;
   temperature: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface IAiConversationCreateInput {
