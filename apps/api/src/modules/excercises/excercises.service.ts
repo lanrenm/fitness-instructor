@@ -4,6 +4,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database';
+import { EmbeddingsService } from '../ai/embeddings.service';
+import { AI_RAG_OWNER_TYPE } from '@fitness/shared-types/ai';
 import { CreateExcerciseDto } from './dto/create-excercise.dto';
 import { UpdateExcerciseDto } from './dto/update-excercise.dto';
 
@@ -39,7 +41,10 @@ const FIND_ONE_SQL = `
 
 @Injectable()
 export class ExcercisesService {
-  constructor(private db: DatabaseService) {}
+  constructor(
+    private db: DatabaseService,
+    private readonly embeddings: EmbeddingsService,
+  ) {}
 
   async findAll() {
     const r = await this.db.query(LIST_SQL);
@@ -79,7 +84,7 @@ export class ExcercisesService {
         );
       }
       await client.query('COMMIT');
-      return this.findOne(newId);
+      return this.embedAndReturn(newId);
     } catch (e) {
       await client.query('ROLLBACK');
       throw e;
@@ -132,7 +137,7 @@ export class ExcercisesService {
         }
       }
       await client.query('COMMIT');
-      return this.findOne(id);
+      return this.embedAndReturn(id);
     } catch (e) {
       await client.query('ROLLBACK');
       throw e;
@@ -145,6 +150,21 @@ export class ExcercisesService {
     await this.assertExists(id);
     // FK ON DELETE CASCADE handles ExcerciseMuscle rows automatically.
     await this.db.query(`DELETE FROM "Excercises" WHERE id = $1`, [id]);
+    await this.embeddings
+      .remove(AI_RAG_OWNER_TYPE.EXCERCISE, id)
+      .catch(() => undefined);
+  }
+
+  private async embedAndReturn(id: string) {
+    const row = await this.findOne(id);
+    await this.embeddings
+      .upsert(
+        AI_RAG_OWNER_TYPE.EXCERCISE,
+        id,
+        `${row.name}\n${row.description ?? ''}`.trim(),
+      )
+      .catch(() => undefined);
+    return row;
   }
 
   private async assertExists(id: string) {

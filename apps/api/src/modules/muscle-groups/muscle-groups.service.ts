@@ -1,5 +1,7 @@
 import { ConflictException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../../database';
+import { EmbeddingsService } from '../ai/embeddings.service';
+import { AI_RAG_OWNER_TYPE } from '@fitness/shared-types/ai';
 import { CreateMuscleGroupDto } from './dto/create-muscle-group.dto';
 import { UpdateMuscleGroupDto } from './dto/update-muscle-group.dto';
 
@@ -25,7 +27,10 @@ const FIND_ONE_SQL = `
 
 @Injectable()
 export class MuscleGroupsService {
-  constructor(private db: DatabaseService) {}
+  constructor(
+    private db: DatabaseService,
+    private readonly embeddings: EmbeddingsService,
+  ) {}
 
   async findAll() {
     const r = await this.db.query(LIST_SQL);
@@ -49,7 +54,7 @@ export class MuscleGroupsService {
        RETURNING id, name, description, "parentId", "isActive", "createdAt", "updatedAt"`,
       [dto.name, dto.description ?? null, parentId, dto.isActive ?? null],
     );
-    return this.findOne(r.rows[0].id);
+    return this.embedAndReturn(r.rows[0].id);
   }
 
   async update(id: string, dto: UpdateMuscleGroupDto) {
@@ -94,7 +99,7 @@ export class MuscleGroupsService {
         dto.isActive ?? null,
       ],
     );
-    return this.findOne(id);
+    return this.embedAndReturn(id);
   }
 
   async remove(id: string) {
@@ -108,6 +113,21 @@ export class MuscleGroupsService {
       throw new ConflictException(`该肌群仍被 ${cnt} 个动作引用，无法删除`);
     }
     await this.db.query(`DELETE FROM "MuscleGroup" WHERE id = $1`, [id]);
+    await this.embeddings
+      .remove(AI_RAG_OWNER_TYPE.MUSCLE_GROUP, id)
+      .catch(() => undefined);
+  }
+
+  private async embedAndReturn(id: string) {
+    const row = await this.findOne(id);
+    await this.embeddings
+      .upsert(
+        AI_RAG_OWNER_TYPE.MUSCLE_GROUP,
+        id,
+        `${row.name}\n${row.description ?? ''}`.trim(),
+      )
+      .catch(() => undefined);
+    return row;
   }
 
   private async assertExists(id: string) {
