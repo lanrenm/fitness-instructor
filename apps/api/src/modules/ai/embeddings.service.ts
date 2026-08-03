@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../database';
 import { ModelRegistry } from '../models/model-registry.service';
 import { MODEL_CAPABILITY } from '../models/model-provider.interface';
@@ -6,6 +6,7 @@ import { AI_RAG_OWNER_TYPE } from '@fitness/shared-types/ai';
 
 interface IEmbedCacheEntry {
   v: number[];
+  input: string;
   expires: number;
 }
 
@@ -14,7 +15,6 @@ const CACHE_MAX = 1000;
 
 @Injectable()
 export class EmbeddingsService {
-  private readonly logger = new Logger(EmbeddingsService.name);
   private readonly cache = new Map<string, IEmbedCacheEntry>();
 
   constructor(
@@ -23,17 +23,17 @@ export class EmbeddingsService {
   ) {}
 
   async embedOne(text: string): Promise<number[]> {
-    const key = this.cacheKey(text);
-    const cached = this.cache.get(key);
-    if (cached && cached.expires > Date.now()) {
-      this.cache.delete(key);
-      this.cache.set(key, cached);
+    const cached = this.cache.get(text);
+    if (cached && cached.expires > Date.now() && cached.input === text) {
+      // LRU touch: re-insert to move to tail
+      this.cache.delete(text);
+      this.cache.set(text, cached);
       return cached.v;
     }
     const provider = this.resolveEmbedProvider();
     const [vec] = await provider.embed({ input: text });
     if (!vec) throw new Error('embed returned empty vector');
-    this.setCache(key, vec);
+    this.setCache(text, vec);
     return vec;
   }
 
@@ -42,24 +42,30 @@ export class EmbeddingsService {
     ownerId: string,
     chunkText: string,
   ): Promise<void> {
-    const provider = this.resolveEmbedProvider();
-    const [vec] = await provider.embed({ input: chunkText });
-    if (!vec) throw new Error('embed returned empty vector');
+    const vec = await this.embedOne(chunkText);
 
-    await this.db.getPool().query(
-      `INSERT INTO "AiEmbedding"(id, "ownerType", "ownerId", "providerId", "chunkText", embedding)
-       VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5::vector)
-       ON CONFLICT ("ownerType", "ownerId", "chunkText") DO UPDATE
-         SET embedding = EXCLUDED.embedding,
-             "providerId" = EXCLUDED."providerId";`,
-      [ownerType, ownerId, provider.id, chunkText, this.toPgVector(vec)],
-    );
-    await this.db
-      .getPool()
-      .query(
+    const client = await this.db.getPool().connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        `INSERT INTO "AiEmbedding"(id, "ownerType", "ownerId", "providerId", "chunkText", embedding)
+         VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5::vector)
+         ON CONFLICT ("ownerType", "ownerId", "chunkText") DO UPDATE
+           SET embedding = EXCLUDED.embedding,
+               "providerId" = EXCLUDED."providerId";`,
+        [ownerType, ownerId, this.resolveEmbedProvider().id, chunkText, this.toPgVector(vec)],
+      );
+      await client.query(
         `DELETE FROM "AiEmbedding" WHERE "ownerType"=$1 AND "ownerId"=$2 AND "chunkText" <> $3;`,
         [ownerType, ownerId, chunkText],
       );
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 
   async remove(
@@ -84,17 +90,11 @@ export class EmbeddingsService {
     return '[' + v.join(',') + ']';
   }
 
-  private cacheKey(text: string): string {
-    let h = 0;
-    for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;
-    return String(h);
-  }
-
-  private setCache(k: string, v: number[]) {
+  private setCache(text: string, v: number[]) {
     if (this.cache.size >= CACHE_MAX) {
       const firstKey = this.cache.keys().next().value;
       if (firstKey !== undefined) this.cache.delete(firstKey);
     }
-    this.cache.set(k, { v, expires: Date.now() + CACHE_TTL_MS });
+    this.cache.set(text, { v, input: text, expires: Date.now() + CACHE_TTL_MS });
   }
 }
