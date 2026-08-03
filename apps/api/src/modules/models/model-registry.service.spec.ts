@@ -58,6 +58,18 @@ describe('ModelRegistry', () => {
     ).toBe(p2);
   });
 
+  it('falls back when preferred is registered but lacks capability', () => {
+    const p1 = makeProvider({ id: 'preferred', capabilities: [MODEL_CAPABILITY.STREAM_CHAT] });
+    const p2 = makeProvider({ id: 'fallback', capabilities: [MODEL_CAPABILITY.EMBED] });
+    const r = setup([p1, p2]);
+    expect(
+      r.resolveForCapability(MODEL_CAPABILITY.EMBED, {
+        preferredId: 'preferred',
+        fallback: 'fallback',
+      }),
+    ).toBe(p2);
+  });
+
   it('throws when capability not supported by resolved provider', () => {
     const p = makeProvider({ id: 'MiniMax-M3', capabilities: [MODEL_CAPABILITY.STREAM_CHAT] });
     const r = setup([p]);

@@ -47,12 +47,20 @@ export class ModelRegistry {
     if (opts.preferredId) candidates.push(opts.preferredId);
     if (opts.fallback) candidates.push(opts.fallback);
 
+    // Try every candidate that is actually registered; only give up once all
+    // of them have been checked, so a registered-but-incapable preferred
+    // provider still falls through to the fallback.
+    const tried: string[] = [];
     for (const id of candidates) {
       const p = this.byId.get(id);
       if (!p) continue; // unknown id: skip to next candidate
+      tried.push(id);
       if (p.capabilities.includes(cap)) return p;
+    }
+
+    if (tried.length) {
       throw new BadRequestException(
-        `Provider '${id}' does not support capability '${cap}'`,
+        `Provider(s) '${tried.join(', ')}' does not support capability '${cap}'`,
       );
     }
 
