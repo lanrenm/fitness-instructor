@@ -60,6 +60,7 @@ export class ExcercisesService {
   async create(dto: CreateExcerciseDto) {
     await this.assertMuscleGroupsExist(dto.muscleGroupIds);
     const client = await this.db.getPool().connect();
+    let newId: string;
     try {
       await client.query('BEGIN');
       const ins = await client.query(
@@ -75,7 +76,7 @@ export class ExcercisesService {
           dto.isActive ?? null,
         ],
       );
-      const newId: string = ins.rows[0].id;
+      newId = ins.rows[0].id;
       for (const mgId of dto.muscleGroupIds) {
         await client.query(
           `INSERT INTO "ExcerciseMuscle" (id, "excerciseId", "muscleGroupId", weight, "isPrimary", "createdAt")
@@ -84,13 +85,13 @@ export class ExcercisesService {
         );
       }
       await client.query('COMMIT');
-      return this.embedAndReturn(newId);
     } catch (e) {
       await client.query('ROLLBACK');
       throw e;
     } finally {
       client.release();
     }
+    return this.embedAndReturn(newId);
   }
 
   async update(id: string, dto: UpdateExcerciseDto) {
@@ -137,13 +138,13 @@ export class ExcercisesService {
         }
       }
       await client.query('COMMIT');
-      return this.embedAndReturn(id);
     } catch (e) {
       await client.query('ROLLBACK');
       throw e;
     } finally {
       client.release();
     }
+    return this.embedAndReturn(id);
   }
 
   async remove(id: string) {
