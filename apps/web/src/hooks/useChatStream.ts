@@ -135,7 +135,9 @@ export function useChatStream(): IUseChatStreamResult {
         setErrorMessage(errorMessageOf(e) ?? 'stream error')
         setStatus('errored')
       } finally {
-        abortRef.current = null
+        // Only clear if we are still the active stream. A later start() may
+        // have already replaced abortRef; its own finally will clear that.
+        if (abortRef.current === ac) abortRef.current = null
       }
     },
     [qc],
