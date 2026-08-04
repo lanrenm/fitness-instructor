@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './lib/app.controller';
 import { AppService } from './lib/app.service';
-import { DatabaseService } from './database';
+import { DatabaseModule } from './database';
 import { UsersController } from './modules/users/users.controller';
 import { UsersService } from './modules/users/users.service';
 import { AuthModule } from './modules/auth/auth.module';
@@ -17,6 +17,7 @@ import { TrainingSessionsModule } from './modules/training-sessions/training-ses
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    DatabaseModule,
     AuthModule,
     OverviewModule,
     ModelsModule,
@@ -27,6 +28,6 @@ import { TrainingSessionsModule } from './modules/training-sessions/training-ses
     TrainingSessionsModule,
   ],
   controllers: [AppController, UsersController],
-  providers: [AppService, DatabaseService, UsersService],
+  providers: [AppService, UsersService],
 })
 export class AppModule {}
