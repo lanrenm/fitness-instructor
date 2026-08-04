@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { DatabaseService } from '../../database';
 import { AiController } from './ai.controller';
 import { AiChatService } from './ai-chat.service';
 import { AiConversationRepository } from './ai-conversation.repository';
@@ -20,6 +21,7 @@ import { AuthModule } from '../auth/auth.module';
     SearchService,
     CompressionService,
     EmbeddingsService,
+    DatabaseService,
   ],
   exports: [EmbeddingsService],
 })
