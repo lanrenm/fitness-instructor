@@ -40,16 +40,17 @@ export function ConversationList({ activeId, onSelect }: IProps) {
       </button>
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="text-xs text-[#718096]">加载中…</div>
+          <div className="text-xs text-muted-foreground">加载中…</div>
         ) : items.length === 0 ? (
-          <div className="text-xs text-[#A0AEC0]">尚无对话</div>
+          <div className="text-xs text-muted-foreground">尚无对话</div>
         ) : (
           items.map((c) => (
             <button
               key={c.id}
               type="button"
               onClick={() => onSelect(c)}
-              className={`block w-full truncate rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-[#F7FAFC] ${
+              aria-current={c.id === activeId ? 'true' : undefined}
+              className={`block w-full truncate rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-accent ${
                 c.id === activeId
                   ? 'bg-[#FFE7EC] font-semibold text-[#FF6B35]'
                   : 'text-[#2D3748]'

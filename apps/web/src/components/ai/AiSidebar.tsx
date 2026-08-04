@@ -10,11 +10,12 @@ interface IProps {
 
 /**
  * @description AI 侧边栏:顶部搜索 + 下方会话列表。
+ * `overflow-visible` 让 SearchBox 的下拉不被裁切。
  */
 export function AiSidebar({ activeId, onSelect, onPickSearchHit }: IProps) {
   return (
-    <aside className="flex h-full w-[280px] flex-col border-r border-[#E2E8F0] bg-[#F7FAFC]">
-      <div className="border-b border-[#E2E8F0] p-3">
+    <aside className="flex h-full w-[280px] flex-col overflow-visible border-r border-input bg-accent">
+      <div className="border-b border-input p-3">
         <SearchBox onPickHit={onPickSearchHit} />
       </div>
       <ConversationList activeId={activeId} onSelect={onSelect} />

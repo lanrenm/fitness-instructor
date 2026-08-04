@@ -8,6 +8,7 @@ interface IProps {
 
 /**
  * @description 跨会话全文+语义检索。250ms 防抖,trim 后长度 < 2 不触发请求。
+ * 点选命中后清空输入,关闭下拉。
  */
 export function SearchBox({ onPickHit }: IProps) {
   const [q, setQ] = useState('')
@@ -22,27 +23,28 @@ export function SearchBox({ onPickHit }: IProps) {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="搜索历史对话…"
+        aria-label="搜索历史对话"
         className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm outline-none focus:border-[#FF6B35]"
       />
       {show && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-[#E2E8F0] bg-white shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-input bg-white shadow-lg">
           {isFetching && hits.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-[#718096]">搜索中…</div>
+            <div className="px-3 py-2 text-xs text-muted-foreground">搜索中…</div>
           ) : hits.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-[#718096]">无匹配</div>
+            <div className="px-3 py-2 text-xs text-muted-foreground">无匹配</div>
           ) : (
             hits.map((h) => (
               <button
                 key={`${h.messageId}-${h.matchType}`}
                 type="button"
-                className="block w-full px-3 py-2 text-left text-sm hover:bg-[#F7FAFC]"
+                className="block w-full px-3 py-2 text-left text-sm hover:bg-accent"
                 onClick={() => {
                   onPickHit(h)
                   setQ('')
                 }}
               >
                 <div className="line-clamp-2 text-[#2D3748]">{h.snippet}</div>
-                <div className="text-[10px] text-[#A0AEC0]">
+                <div className="text-[10px] text-muted-foreground">
                   {h.matchType} · score {h.score.toFixed(2)}
                 </div>
               </button>
