@@ -260,6 +260,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@fitness/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
       '@fitness/ui-components':
         specifier: workspace:*
         version: link:../../packages/ui-components
