@@ -90,16 +90,6 @@ export class AiController {
     );
   }
 
-  @Get('conversations/:id/messages')
-  async messages(
-    @Req() req: any,
-    @Param('id') id: string,
-    @Query('since') since?: string,
-  ) {
-    await this.convRepo.assertOwned(id, req.user.userId);
-    return this.messageRepo.getForConversation(id, since);
-  }
-
   @Get('search')
   async searchHits(
     @Req() req: any,

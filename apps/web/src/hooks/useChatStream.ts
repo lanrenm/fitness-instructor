@@ -52,6 +52,11 @@ export function useChatStream(): IUseChatStreamResult {
 
   const start = useCallback(
     async (conversationId: string, content: string) => {
+      // Re-entrancy guard: if a previous stream is still running, abort it
+      // before starting a new one so the orphaned reader can't keep writing
+      // into our state.
+      abortRef.current?.abort()
+
       const ac = new AbortController()
       abortRef.current = ac
 
@@ -125,9 +130,9 @@ export function useChatStream(): IUseChatStreamResult {
         setStatus('done')
         await qc.invalidateQueries({ queryKey: ['ai-conversation', conversationId] })
         await qc.invalidateQueries({ queryKey: ['ai-conversations'] })
-      } catch (e: any) {
-        if (e?.name === 'AbortError') return
-        setErrorMessage(e?.message ?? 'stream error')
+      } catch (e: unknown) {
+        if (isAbortError(e)) return
+        setErrorMessage(errorMessageOf(e) ?? 'stream error')
         setStatus('errored')
       } finally {
         abortRef.current = null
@@ -147,4 +152,21 @@ export function useChatStream(): IUseChatStreamResult {
     stop,
     reset,
   }
+}
+
+function isAbortError(e: unknown): boolean {
+  return (
+    typeof e === 'object' &&
+    e !== null &&
+    'name' in e &&
+    (e as { name?: unknown }).name === 'AbortError'
+  )
+}
+
+function errorMessageOf(e: unknown): string | undefined {
+  if (typeof e === 'object' && e !== null && 'message' in e) {
+    const m = (e as { message?: unknown }).message
+    if (typeof m === 'string') return m
+  }
+  return undefined
 }
