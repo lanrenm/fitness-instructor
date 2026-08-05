@@ -8,9 +8,10 @@ import {
   Post,
   Query,
   Req,
-  Sse,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AiConversationRepository } from './ai-conversation.repository';
 import { AiMessageRepository } from './ai-message.repository';
@@ -19,7 +20,6 @@ import { SearchService } from './search.service';
 import { CreateAiConversationDto } from './dto/create-conversation.dto';
 import { UpdateAiConversationDto } from './dto/update-conversation.dto';
 import { SendAiMessageDto } from './dto/send-message.dto';
-import { map } from 'rxjs/operators';
 
 @Controller('ai')
 @UseGuards(JwtAuthGuard)
@@ -76,18 +76,40 @@ export class AiController {
     return { deleted: ok };
   }
 
-  @Sse('conversations/:id/messages')
-  stream(
+  @Post('conversations/:id/messages')
+  async stream(
     @Req() req: any,
+    @Res() res: Response,
     @Param('id') id: string,
     @Body() body: SendAiMessageDto,
-  ) {
-    return this.chat.stream(req.user.userId, id, body).pipe(
-      map((e) => ({
-        type: e.type,
-        data: e,
-      })),
-    );
+  ): Promise<void> {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders?.();
+
+    const subscription = this.chat
+      .stream(req.user.userId, id, body)
+      .subscribe({
+        next: (event) => {
+          res.write(`event: ${event.type}\n`);
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+        },
+        error: (err) => {
+          const payload = { type: 'error', message: String(err?.message ?? err) };
+          res.write(`event: error\n`);
+          res.write(`data: ${JSON.stringify(payload)}\n\n`);
+          res.end();
+        },
+        complete: () => {
+          res.end();
+        },
+      });
+
+    req.on('close', () => {
+      subscription.unsubscribe();
+    });
   }
 
   @Get('search')

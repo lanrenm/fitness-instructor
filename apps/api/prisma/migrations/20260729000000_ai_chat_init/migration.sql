@@ -10,7 +10,7 @@ CREATE TABLE "AiConversation" (
     "model" TEXT NOT NULL DEFAULT 'MiniMax-M3',
     "temperature" DOUBLE PRECISION NOT NULL DEFAULT 0.7,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "AiConversation_pkey" PRIMARY KEY ("id")
 );
