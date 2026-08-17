@@ -41,6 +41,7 @@ export function ChatPane({ conversation }: IProps) {
         streaming={isStreaming}
         draftContent={stream.draftContent}
         draftReasoning={stream.draftReasoning}
+        pendingUserContent={stream.pendingUserContent}
       />
       <ChatInput
         disabled={isStreaming}

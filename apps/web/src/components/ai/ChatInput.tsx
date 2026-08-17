@@ -37,12 +37,17 @@ export function ChatInput({
           onChange={(e) => setText(e.target.value)}
           disabled={disabled}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            // ENTER sends (the common chat UX); Cmd/Ctrl+ENTER inserts a
+            // newline so power users can compose multi-line questions
+            // without leaving the keyboard. We always preventDefault on
+            // ENTER when the field is enabled, otherwise a stray newline
+            // sneaks in before the submit fires.
+            if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
               e.preventDefault()
               submit()
             }
           }}
-          placeholder={disabled ? '生成中…' : '输入你的问题 (Cmd/Ctrl + Enter 发送)'}
+          placeholder={disabled ? '生成中…' : '输入你的问题 (Enter 发送, Cmd/Ctrl + Enter 换行)'}
           rows={2}
           className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-[#FF6B35] disabled:cursor-not-allowed disabled:opacity-50"
         />

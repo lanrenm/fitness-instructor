@@ -11,6 +11,14 @@ export type TStreamStatus = 'idle' | 'streaming' | 'done' | 'errored'
 
 export interface IUseChatStreamResult {
   status: TStreamStatus
+  /**
+   * Optimistic copy of the user's just-sent text. Cleared when the stream
+   * finishes (or is aborted/errored) so it doesn't linger past the moment
+   * the real user message appears in the conversation query. The conversation
+   * query is invalidated on `done`, and the user message renders from the
+   * server response on the next refetch.
+   */
+  pendingUserContent: string | null
   draftContent: string
   draftReasoning: string
   draftCitations: IAiCitation[]
@@ -28,6 +36,7 @@ export interface IUseChatStreamResult {
 export function useChatStream(): IUseChatStreamResult {
   const qc = useQueryClient()
   const [status, setStatus] = useState<TStreamStatus>('idle')
+  const [pendingUserContent, setPendingUserContent] = useState<string | null>(null)
   const [draftContent, setDraftContent] = useState('')
   const [draftReasoning, setDraftReasoning] = useState('')
   const [draftCitations, setDraftCitations] = useState<IAiCitation[]>([])
@@ -37,6 +46,7 @@ export function useChatStream(): IUseChatStreamResult {
 
   const reset = useCallback(() => {
     setStatus('idle')
+    setPendingUserContent(null)
     setDraftContent('')
     setDraftReasoning('')
     setDraftCitations([])
@@ -61,6 +71,7 @@ export function useChatStream(): IUseChatStreamResult {
       abortRef.current = ac
 
       setStatus('streaming')
+      setPendingUserContent(content)
       setDraftContent('')
       setDraftReasoning('')
       setDraftCitations([])
@@ -117,9 +128,13 @@ export function useChatStream(): IUseChatStreamResult {
                 break
               case 'error':
                 setErrorMessage(parsed.error.message)
+                setPendingUserContent(null)
                 setStatus('errored')
                 return
               case 'done':
+                // The real user message will be in the next refetch; clear
+                // the optimistic copy so it doesn't double-render.
+                setPendingUserContent(null)
                 setStatus('done')
                 break
               default:
@@ -133,6 +148,7 @@ export function useChatStream(): IUseChatStreamResult {
       } catch (e: unknown) {
         if (isAbortError(e)) return
         setErrorMessage(errorMessageOf(e) ?? 'stream error')
+        setPendingUserContent(null)
         setStatus('errored')
       } finally {
         // Only clear if we are still the active stream. A later start() may
@@ -145,6 +161,7 @@ export function useChatStream(): IUseChatStreamResult {
 
   return {
     status,
+    pendingUserContent,
     draftContent,
     draftReasoning,
     draftCitations,
