@@ -8,6 +8,26 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const mfRemoteUrl =
     env.VITE_MF_REMOTE_URL ?? 'http://localhost:3000/mf-auth/remoteEntry.js';
+  // BFF upstream. Default to host.docker.internal so the web container
+  // can reach the BFF container via OrbStack's loopback alias. When
+  // OrbStack's port forwarder gets stuck holding stale ESTABLISHED
+  // sockets on localhost:3000 (which blocks new connections even after
+  // the BFF container is restarted), override BFF_HOST with the BFF
+  // container's docker-network IP to bypass the forwarder entirely:
+  //   docker inspect fi-bff --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+  // then `BFF_HOST=<that-ip> npm run dev` or set the env in docker-compose.
+  // BFF upstream. Default to host.docker.internal so the web container
+  // can reach the BFF container via OrbStack's loopback alias. When
+  // OrbStack's port forwarder gets stuck holding stale ESTABLISHED
+  // sockets on localhost:3000 (which blocks new connections even after
+  // the BFF container is restarted), override BFF_HOST with the BFF
+  // container's docker-network IP to bypass the forwarder entirely:
+  //   docker inspect fi-bff --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+  // then set BFF_HOST in docker-compose env. The current value is the
+  // live BFF IP — re-run the inspect command above after any BFF
+  // recreate and update here.
+  const bffHost = env.BFF_HOST ?? process.env.BFF_HOST ?? '192.168.97.2';
+  const bffTarget = `http://${bffHost}:3000`;
 
   return {
     plugins: [
@@ -168,15 +188,15 @@ export default defineConfig(({ mode }) => {
       },
       proxy: {
         '/api': {
-          target: 'http://host.docker.internal:3000',
+          target: bffTarget,
           changeOrigin: true,
         },
         '/bff': {
-          target: 'http://host.docker.internal:3000',
+          target: bffTarget,
           changeOrigin: true,
         },
         '/users': {
-          target: 'http://host.docker.internal:3001',
+          target: `http://${env.BFF_HOST ?? process.env.BFF_HOST ?? '192.168.97.2'}:3001`,
           changeOrigin: true,
         },
         // Step 2a: proxy the standalone embed bundle (BFF Next.js's
@@ -187,7 +207,7 @@ export default defineConfig(({ mode }) => {
         // gets a 404 HTML page, parses it as JS, and dies with
         // "Unexpected token '<'".
         '/mf-auth-embed': {
-          target: 'http://host.docker.internal:3000',
+          target: bffTarget,
           changeOrigin: true,
         },
       },
