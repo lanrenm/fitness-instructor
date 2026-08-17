@@ -1,0 +1,169 @@
+/* TopBar 浮岛 — 与 bundle 端 (apps/bff/src/remote/auth/_components/...) 风格一致 */
+.bar {
+  position: sticky;
+  top: 16px;
+  z-index: 30;
+  margin: 16px 16px 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px 22px;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.leftGroup {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  min-width: 0;
+}
+
+.rightGroup {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+/* ---------- 用户菜单触发器 ---------- */
+.rightTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.rightTrigger:focus-visible {
+  outline: 2px solid #ff6b35;
+  outline-offset: 4px;
+  border-radius: 16px;
+}
+
+/* ---------- 用户下拉菜单 ---------- */
+.userMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  padding: 8px;
+  z-index: 40;
+}
+
+/* ---------- Logo ---------- */
+.logoWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logoCircle {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: #ff6b35;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.logoText {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  letter-spacing: -0.01em;
+}
+
+.divider {
+  width: 1px;
+  height: 22px;
+  background: #e2e8f0;
+}
+
+/* ---------- 模块切换 ---------- */
+.moduleSwitcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  background: transparent;
+  color: #4a5568;
+  font-size: 14px;
+  font-weight: 500;
+  border: 0;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+  white-space: nowrap;
+}
+
+.tab:hover:not(.tabActive) {
+  background: #f7fafc;
+  color: #2d3748;
+}
+
+.tabActive {
+  background: #ff6b35;
+  color: #ffffff;
+}
+
+.tabIcon {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- 用户信息 ---------- */
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+
+.userName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.userStatus {
+  font-size: 12px;
+  color: #718096;
+  margin-top: 2px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: #ff6b35;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.chevron {
+  color: #a0aec0;
+  width: 18px;
+  height: 18px;
+}

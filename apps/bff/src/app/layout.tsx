@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// next/font/google is intentionally NOT used. In dev mode it fetches
+// the font CSS from fonts.googleapis.com at request time, which hangs
+// forever inside this container (no internet access, and the configured
+// proxy at 127.0.0.1:7897 is not running). That hung request blocks the
+// page render and makes /embed/auth (the SSR target of /api/embed/auth)
+// never respond. globals.css already declares a system font stack as
+// the primary font-family, so removing the Geist CSS variables is safe.
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -23,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en">
       <body>{children}</body>
     </html>
   );

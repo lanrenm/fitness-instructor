@@ -1,0 +1,40 @@
+{
+  "name": "@fitness/ui-components",
+  "version": "1.0.0",
+  "description": "Fitness Instructor UI Components",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./button": "./dist/components/ui/button.js",
+    "./utils": "./dist/lib/utils.js"
+  },
+  "scripts": {
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "@radix-ui/react-slot": "^1.2.4",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "lucide-react": "^0.300.0",
+    "recharts": "^3.9.2",
+    "tailwind-merge": "^2.2.0",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "peerDependencies": {
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "tsup": "^8.0.0",
+    "typescript": "^5"
+  },
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.0"
+}

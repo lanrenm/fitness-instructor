@@ -1,21 +1,216 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig, loadEnv } from 'vite';
+import path from 'node:path';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+import { federation } from '@module-federation/vite';
 
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    proxy: {
-      // BFF 服务 - 项目 API 和页面渲染
-      '/bff': {
-        target: 'http://host.docker.internal:3000',
-        changeOrigin: true,
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const mfRemoteUrl =
+    env.VITE_MF_REMOTE_URL ?? 'http://localhost:3000/mf-auth/remoteEntry.js';
+  // BFF upstream. Default to host.docker.internal so the web container
+  // can reach the BFF container via OrbStack's loopback alias. When
+  // OrbStack's port forwarder gets stuck holding stale ESTABLISHED
+  // sockets on localhost:3000 (which blocks new connections even after
+  // the BFF container is restarted), override BFF_HOST with the BFF
+  // container's docker-network IP to bypass the forwarder entirely:
+  //   docker inspect fi-bff --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+  // then `BFF_HOST=<that-ip> npm run dev` or set the env in docker-compose.
+  // BFF upstream. Default to host.docker.internal so the web container
+  // can reach the BFF container via OrbStack's loopback alias. When
+  // OrbStack's port forwarder gets stuck holding stale ESTABLISHED
+  // sockets on localhost:3000 (which blocks new connections even after
+  // the BFF container is restarted), override BFF_HOST with the BFF
+  // container's docker-network IP to bypass the forwarder entirely:
+  //   docker inspect fi-bff --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+  // then set BFF_HOST in docker-compose env. The current value is the
+  // live BFF IP — re-run the inspect command above after any BFF
+  // recreate and update here.
+  const bffHost = env.BFF_HOST ?? process.env.BFF_HOST ?? '192.168.97.2';
+  const bffTarget = `http://${bffHost}:3000`;
+
+  return {
+    plugins: [
+      react(),
+      tailwindcss(),
+      federation({
+        name: 'web',
+        filename: 'remoteEntry.js',
+        remotes: {
+          bff_auth: {
+            // BFF's Rspack outputs a global-script remoteEntry.js
+            // (`var bff_auth; ... bff_auth = ...;`), NOT an ESM with
+            // `export` statements. With `type: 'module'` the host's
+            // `import()` returns an empty module object, the runtime's
+            // loadRemote() then wraps it incorrectly and `mod.default`
+            // resolves to undefined. Default (no `type`) makes the
+            // federation plugin inject a `<script>` tag — the global
+            // `window.bff_auth` becomes the remote and loadRemote()
+            // unwraps `default` correctly.
+            name: 'bff_auth',
+            entry: mfRemoteUrl,
+            entryGlobalName: 'bff_auth',
+            shareScope: 'default',
+          },
+        },
+        shared: {
+          // Eager:true on the HOST means React/react-dom register in the
+          // share scope synchronously when the host bundle evaluates, so
+          // they're available before the remote's first consume resolves.
+          // Without eager:true, the host's React registration is async
+          // (chunk-loaded), and the remote's consume runs first — falling
+          // back to the 19.2.6 vendor chunk from ui-components' peer dep
+          // and loading a second React instance, breaking useState's
+          // dispatcher. Required because the remote's bootstrap eagerly
+          // (sync) consumes React; the host's async share init loses the
+          // race.
+          //
+          // import:false on react/react-dom tells the Vite plugin to
+          // generate a seed module (in dev only) that imports the HOST's
+          // own local React/ReactDOM and writes it into
+          // __mfModuleCache.share["react"] BEFORE the initHost() loop
+          // calls runtime.loadShare(). Without it, the loop's first
+          // loadShare("react") finds an empty share scope and falls
+          // through to the remote's initializeSharingData fallback —
+          // writing the REMOTE's Rspack-bundled React@19.2.4 (or 19.2.6
+          // after version alignment) into the share scope. Then
+          // AuthPage's consume proxy pulls the remote's React, while the
+          // host's reconciler sets the dispatcher on a different
+          // ReactSharedInternals → `Cannot read properties of null
+          // (reading 'useState')`. With import:false, the host's
+          // `import 'react'` is also proxied through the share scope, so
+          // the host, the seed, and AuthPage all share one React
+          // instance.
+          //
+          // NOTE: `import` here is a STRING ('react' / 'react-dom'),
+          // NOT boolean false. Setting it to literal `false` would make
+          // the seed code do `import("/@fs/<abs>/node_modules/react/index.js")`
+          // which loads the raw CJS file (`'use strict'; ... module.exports = ...`)
+          // in the browser ESM context → `ReferenceError: module is not defined`.
+          // A string value short-circuits the Vite plugin's
+          // getConcreteSharedImportSource (line 986: `if (typeof
+          // configuredImport === "string") return configuredImport;`) so
+          // the seed does `import("react")` which Vite's prebundle serves
+          // as ESM (`node_modules/.vite/deps/react.js?v=...`).
+          //
+          // SUBPATH OVERRIDES — react/jsx-dev-runtime,
+          // react/jsx-runtime, react-dom/client. The Vite plugin's
+          // COMMON_SHARED_SUBPATHS map (line 3188) auto-walks these
+          // subpaths and shares them with the PARENT's shareItem via
+          // getLoadShareModulePath + writeLoadShareModule + writePreBuildLibPath
+          // (line 5041). With `import: 'react'` on the parent, the plugin's
+          // writePreBuildLibPath line 1005 uses the parent's
+          // getConcreteSharedImportSource → returns the string `'react'`
+          // even when pkg='react/jsx-dev-runtime'. The generated prebuild
+          // module then does `import __mfPrebuildDefault from 'react'`,
+          // which doesn't expose `jsxDEV` (that's only on the
+          // `react/jsx-dev-runtime` subpath). The destructured export
+          // `const jsxDEV = __mfPrebuildExports.jsxDEV` is `undefined`,
+          // and the host's JSX transform call site throws `_jsxDEV is
+          // not a function`. Same trap for `react/jsx-runtime` (jsx/jsxs)
+          // and `react-dom/client` (createRoot).
+          //
+          // Declaring each subpath explicitly here gives it its own
+          // shareItem with `import: '<subpath>'` (string), so:
+          //   - The seed does `import('react/jsx-dev-runtime')` →
+          //     Vite prebundle serves it as ESM (line 5035-5048 pushes
+          //     it into optimizeDeps.include).
+          //   - writePreBuildLibPath's special case for `react/jsx-dev-runtime`
+          //     (line 1020-1029) imports from the subpath, and the
+          //     destructured jsxDEV is the real one.
+          //   - getSharedNamedExports returns ['Fragment','jsxDEV'] from
+          //     the subpath's actual ESM file, not from `'react'` main.
+          // The plugin's loop at line 5012 iterates ALL shared keys, so
+          // these explicit subpath entries overwrite the auto-generated
+          // ones the parent loop (line 5041) wrote first. Order doesn't
+          // matter; the later writeLoadShareModule / writePreBuildLibPath
+          // call (per-key) replaces the earlier one (per-subpath).
+          //
+          // @fitness/ui-components / lucide-react need `import: '<pkg>'`
+          // (string) so the Vite plugin generates a host-side seed that
+          // loads the HOST's own local copy into __mfModuleCache.share[]
+          // BEFORE initHost()'s loadShare() loop runs. Without it, the
+          // host's `import { IntensityChart } from '@fitness/ui-components'`
+          // gets rewritten by the plugin to `await __mfLoadShare('@fitness/ui-components')`,
+          // the share scope is empty (no remote has registered it yet),
+          // loadShare returns an empty module namespace, and the destructure
+          // throws `SyntaxError: does not provide an export named 'IntensityChart'`
+          // — blocking the entire React tree from mounting (root stays
+          // empty, no DOM, dashboard cards/chart never render).
+          //
+          // The previous comment ("host code never imports them directly")
+          // was true at one point but is now stale — Dashboard.tsx,
+          // TopBar.tsx, LeftBar.tsx all import from @fitness/ui-components,
+          // and Dashboard.tsx + modules.ts + TopBar.tsx all import from
+          // lucide-react. Apply the same seed pattern as react.
+          'react/jsx-dev-runtime': { singleton: true, requiredVersion: '^19.0.0', eager: true, import: 'react/jsx-dev-runtime' },
+          'react/jsx-runtime': { singleton: true, requiredVersion: '^19.0.0', eager: true, import: 'react/jsx-runtime' },
+          'react-dom': { singleton: true, requiredVersion: '^19.0.0', eager: true, import: 'react-dom' },
+          'react-dom/client': { singleton: true, requiredVersion: '^19.0.0', eager: true, import: 'react-dom/client' },
+          react: { singleton: true, requiredVersion: '^19.0.0', eager: true, import: 'react' },
+          'lucide-react': { singleton: true, eager: true, import: 'lucide-react' },
+          '@fitness/ui-components': { singleton: true, eager: true, import: '@fitness/ui-components' },
+          // `eager` 是 MF runtime 的合法共享选项(见上方注释,host 端必需),
+          // 但 @module-federation/vite 的 shared 选项类型未声明该字段,故此处断言。
+        } as Record<string, { singleton?: boolean; requiredVersion?: string; import?: string; eager?: boolean }>,
+        // The dynamic-remote-type-hints runtime plugin (enabled by default
+        // in dev) opens a WebSocket to ws://127.0.0.1:16322/ expecting an
+        // Rspack dev server there. BFF runs `rspack build --watch` (not
+        // `serve`), so no dev server is reachable from the host browser, the
+        // WebSocket fails, and the federation runtime's `__mf_remote_pending`
+        // promise hangs forever. Disable it on both sides. The same option
+        // is also set in apps/bff/rspack.config.mjs for the remote side.
+        dev: {
+          disableDynamicRemoteTypeHints: true,
+        },
+        // The dts (declaration type sharing) feature tries to download
+        // `@mf-types.zip` from the remote at runtime. With BFF in
+        // `build --watch` mode (no dev server for type streaming) this
+        // always fails. It's a dev-time IDE hint only — disable here.
+        // Same as the dts.disable option in @module-federation/sdk.
+        dts: false,
+      }),
+    ],
+    server: {
+      // Vite 默认只允许访问项目根（apps/web）下的文件，否则报 404。Tailwind v4
+      // oxide scanner 通过 @source "..." 读取跨包源码时也会走 fs，把
+      // monorepo 根（packages/、apps/ 同级）加入 allow list。
+      fs: {
+        allow: [
+          // apps/web 自身
+          path.resolve(__dirname),
+          // 兄弟 apps（apps/web vite 在 container 内会通过 /app 访问，但
+          // 路径解析仍依赖工作目录）
+          // monorepo 根：让 Tailwind 能扫 packages/ui-components/src/
+          path.resolve(__dirname, '..', '..'),
+          path.resolve(__dirname, '..', '..', 'packages'),
+        ],
       },
-      // API 服务 - 用户 API
-      '/users': {
-        target: 'http://host.docker.internal:3001',
-        changeOrigin: true,
+      proxy: {
+        '/api': {
+          target: bffTarget,
+          changeOrigin: true,
+        },
+        '/bff': {
+          target: bffTarget,
+          changeOrigin: true,
+        },
+        '/users': {
+          target: `http://${env.BFF_HOST ?? process.env.BFF_HOST ?? '192.168.97.2'}:3001`,
+          changeOrigin: true,
+        },
+        // Step 2a: proxy the standalone embed bundle (BFF Next.js's
+        // public/ dir) through Vite. /api/embed/auth returns
+        // bundleUrl: '/mf-auth-embed/embed.js' and the host <script>
+        // loads it from the same origin as the page (5173), so Vite
+        // has to forward to BFF (3000). Without this the browser
+        // gets a 404 HTML page, parses it as JS, and dies with
+        // "Unexpected token '<'".
+        '/mf-auth-embed': {
+          target: bffTarget,
+          changeOrigin: true,
+        },
       },
     },
-  },
-})
+  };
+});

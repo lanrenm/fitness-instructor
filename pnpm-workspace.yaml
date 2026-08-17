@@ -1,0 +1,22 @@
+packages:
+  - 'packages/*'
+  - 'apps/*'
+allowBuilds:
+  '@nestjs/core': false
+  '@prisma/engines': false
+  esbuild: true
+  prisma: false
+  sharp: false
+  unrs-resolver: false
+nodeLinker: hoisted
+publicHoistPattern:
+  - '*linux-arm64*'
+  - '*rolldown-binding*'
+  - '*lightningcss.linux*'
+# pnpm 11 no longer reads `pnpm.overrides` from root package.json; the
+# setting migrated to the top-level `overrides` key here. Why: see memory
+# pnpm-file-link-sync.md / mf-* notes — without single-version React,
+# esbuild bundles the wrong copy and hook dispatcher blows up under MF.
+overrides:
+  react: '$react'
+  react-dom: '$react-dom'

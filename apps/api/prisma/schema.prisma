@@ -19,7 +19,9 @@ model User {
   name        String? // 用户昵称或真实姓名
   createdAt   DateTime  @default(now()) // 账户创建时间
   updatedAt   DateTime  @updatedAt // 账户信息最后更新时间
-  workouts    Workout[] // 关联关系：当前用户创建的所有训练计划
+  workouts         Workout[] // 关联关系：当前用户创建的所有训练计划
+  trainingSessions TrainingSession[] // 关联关系：当前用户的训练打卡记录
+  aiConversations  AiConversation[] // 关联关系：当前用户的 AI 对话
 }
 
 // 动作表
@@ -116,3 +118,72 @@ model WorkoutExcercises {
 // 2 = 中级 - 有一定运动基础，掌握基本动作要领
 // 3 = 高级 - 长期规律训练，能够完成复杂动作
 // 4 = 专业级 - 运动员级别，需要专业指导和监督
+
+// 训练打卡会话（用户实际完成的一次训练）
+model TrainingSession {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String // 训练名称，如"胸部+三头训练"
+  startedAt       DateTime // 实际开始时间
+  durationMinutes Int // 训练时长（分钟）
+  exerciseCount   Int // 动作数量
+  intensity       Int // 0-100 完成度
+  caloriesBurned  Int // 消耗热量（kcal）
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startedAt])
+}
+
+/// pgvector 扩展必须先建:CREATE EXTENSION IF NOT EXISTS vector;
+/// vector(N) 维度由当前注册的 embed provider 维度(MODELS_PROVIDER_*_EMBED_DIM)决定,默认 1024。
+/// 若换 embed provider 且维度不同:1) 新 migration 改列类型;2) 清空 AiEmbedding;3) 重新 upsert。
+
+model AiConversation {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String?
+  summary     String?
+  /// Provider id,与 ModelRegistry 中注册的 provider 一致(默认 'MiniMax-M3')。
+  model       String   @default("MiniMax-M3")
+  temperature Float    @default(0.7)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    AiMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model AiMessage {
+  id               String   @id @default(cuid())
+  conversationId   String
+  role             String
+  content          String
+  reasoning        String?
+  ragContext       Json?
+  providerId       String?
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  compressed       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  conversation     AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model AiEmbedding {
+  id         String   @id @default(cuid())
+  ownerType  String
+  ownerId    String
+  providerId String?
+  chunkText  String
+  /// NOTE: dimension depends on registered embed provider. Update via new migration if needed.
+  embedding  Unsupported("vector(1024)")
+  createdAt  DateTime @default(now())
+
+  @@unique([ownerType, ownerId, chunkText])
+  @@index([ownerType])
+}

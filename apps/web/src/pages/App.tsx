@@ -12,15 +12,6 @@ async function fetchProjects() {
   return res.json()
 }
 
-async function login(username: string, password: string) {
-  const res = await fetch('/bff/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  })
-  return res.json()
-}
-
 export default function App() {
   const [users, setUsers] = useState<any[]>([])
   const [projects, setProjects] = useState<any[]>([])
@@ -86,10 +77,10 @@ export default function App() {
         </ul>
       </section>
 
-      {/* 3. 访问登录页 - 渲染 BFF 的页面 */}
+      {/* 3. 访问登录页 - MF 远端动态加载 */}
       <section style={{ padding: '1rem', border: '1px solid #ddd', borderRadius: '8px' }}>
-        <h2>3. 登录页面 (BFF 渲染)</h2>
-        <a href="/bff/login" target="_blank" rel="noopener noreferrer">
+        <h2>3. 登录页面 (MF 远端加载)</h2>
+        <a href="/login">
           打开登录页
         </a>
       </section>
