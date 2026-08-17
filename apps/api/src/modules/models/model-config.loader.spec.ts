@@ -51,4 +51,31 @@ describe('ModelConfigLoader', () => {
       }),
     ).toThrow(/protocol/i);
   });
+
+  it('throws when API_KEY is missing', () => {
+    expect(() =>
+      loadModelProvidersFromEnv({
+        MODELS_PROVIDER_MINIMAX_ID: 'MiniMax-M3',
+        MODELS_PROVIDER_MINIMAX_PROTOCOL: 'anthropic',
+        // MODELS_PROVIDER_MINIMAX_API_KEY deliberately omitted
+        MODELS_PROVIDER_MINIMAX_CHAT_MODEL: 'MiniMax-M3',
+        MODELS_PROVIDER_MINIMAX_SUMMARY_MODEL: 'MiniMax-M3-haiku',
+      }),
+    ).toThrow(/missing API_KEY/);
+  });
+
+  it('throws when API_KEY is empty string', () => {
+    // Empty string must be rejected the same as missing — without this,
+    // apiKey='' flows into Anthropic SDK and triggers its "Could not
+    // resolve authentication method" check at request time.
+    expect(() =>
+      loadModelProvidersFromEnv({
+        MODELS_PROVIDER_MINIMAX_ID: 'MiniMax-M3',
+        MODELS_PROVIDER_MINIMAX_PROTOCOL: 'anthropic',
+        MODELS_PROVIDER_MINIMAX_API_KEY: '',
+        MODELS_PROVIDER_MINIMAX_CHAT_MODEL: 'MiniMax-M3',
+        MODELS_PROVIDER_MINIMAX_SUMMARY_MODEL: 'MiniMax-M3-haiku',
+      }),
+    ).toThrow(/missing API_KEY/);
+  });
 });

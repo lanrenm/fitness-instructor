@@ -5,6 +5,9 @@ import { OpenAICompatibleProvider } from './providers/openai-compatible.provider
 interface IParsedProvider {
   id: string;
   protocol: 'anthropic' | 'openai-compatible';
+  // API_KEY non-emptiness is enforced in loadModelProvidersFromEnv before
+  // reaching `instantiate`, so by the time we hand this off to a provider
+  // constructor apiKey is guaranteed to be a non-empty string.
   apiKey: string;
   baseUrl?: string;
   config: {
@@ -50,10 +53,24 @@ export function loadModelProvidersFromEnv(env: NodeJS.ProcessEnv): IModelProvide
         `MODELS_PROVIDER_${id}: invalid or missing PROTOCOL (got '${protocol}', must be 'anthropic' | 'openai-compatible')`,
       );
     }
+    // Fail fast on missing credentials — without this, the provider is built
+    // successfully and only blows up at first request time inside the SDK
+    // (Anthropic SDK v0.115 throws "Could not resolve authentication method"
+    // when apiKey is empty/missing). Checking at startup surfaces the
+    // misconfiguration immediately and gives the operator a clear message.
+    if (!props.API_KEY) {
+      throw new Error(
+        `MODELS_PROVIDER_${id}: missing API_KEY (set MODELS_PROVIDER_${id}_API_KEY in the env)`,
+      );
+    }
     const parsed: IParsedProvider = {
       id,
       protocol: protocol as any,
-      apiKey: props.API_KEY ?? '',
+      // Non-null assertion is safe: the missing/empty API_KEY check above
+      // throws before this point, so props.API_KEY is guaranteed truthy
+      // here. We use `|| undefined` in the constructor signature so empty
+      // strings collapse cleanly rather than propagating as `''`.
+      apiKey: props.API_KEY!,
       baseUrl: props.BASE_URL,
       config: {
         chatModel: props.CHAT_MODEL ?? id,
